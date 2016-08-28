@@ -8,7 +8,6 @@ using TGC.Core.Input;
 using TGC.Core.SceneLoader;
 using TGC.Core.Textures;
 using TGC.Core.Utils;
-
 namespace TGC.Group.Model
 {
     /// <summary>
@@ -81,9 +80,11 @@ namespace TGC.Group.Model
             var lookAt = Vector3.Empty;
             //Configuro donde esta la posicion de la camara y hacia donde mira.
             Camara.SetCamera(cameraPosition, lookAt);
+            Camara = new TgcFpsCamera(cameraPosition, Input);
             //Internamente el framework construye la matriz de view con estos dos vectores.
             //Luego en nuestro juego tendremos que crear una cámara que cambie la matriz de view con variables como movimientos o animaciones de escenas.
         }
+
 
         /// <summary>
         ///     Se llama en cada frame.
