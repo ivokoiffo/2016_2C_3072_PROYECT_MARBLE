@@ -30,6 +30,7 @@ namespace TGC.Group.Model
             Description = Game.Default.Description;
         }
 
+
         //Caja que se muestra en el ejemplo.
         private TgcBox Box { get; set; }
 
@@ -45,6 +46,7 @@ namespace TGC.Group.Model
         ///     procesamiento que podemos pre calcular para nuestro juego.
         ///     Borrar el codigo ejemplo no utilizado.
         /// </summary>
+        private TgcScene lvl1;
         public override void Init()
         {
             //Device de DirectX para crear primitivas.
@@ -71,10 +73,13 @@ namespace TGC.Group.Model
             //Defino una escala en el modelo logico del mesh que es muy grande.
             Mesh.Scale = new Vector3(0.5f, 0.5f, 0.5f);
 
+            lvl1 = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapa con texturas + objetos-TgcScene.xml");
+
             //Suelen utilizarse objetos que manejan el comportamiento de la camara.
             //Lo que en realidad necesitamos gráficamente es una matriz de View.
             //El framework maneja una cámara estática, pero debe ser inicializada.
             //Posición de la camara.
+        
             var cameraPosition = new Vector3(0, 0, 125);
             //Quiero que la camara mire hacia el origen (0,0,0).
             var lookAt = Vector3.Empty;
@@ -106,14 +111,14 @@ namespace TGC.Group.Model
             {
                 //Como ejemplo podemos hacer un movimiento simple de la cámara.
                 //En este caso le sumamos un valor en Y
-                Camara.SetCamera(Camara.Position + new Vector3(0, 10f, 0), Camara.LookAt);
+                ///Camara.SetCamera(Camara.Position + new Vector3(0, 10f, 0), Camara.LookAt);
                 //Ver ejemplos de cámara para otras operaciones posibles.
 
                 //Si superamos cierto Y volvemos a la posición original.
-                if (Camara.Position.Y > 300f)
-                {
-                    Camara.SetCamera(new Vector3(Camara.Position.X, 0f, Camara.Position.Z), Camara.LookAt);
-                }
+                //if (Camara.Position.Y > 300f)
+               // {
+               //     Camara.SetCamera(new Vector3(Camara.Position.X, 0f, Camara.Position.Z), Camara.LookAt);
+              //  }
             }
         }
 
@@ -147,7 +152,8 @@ namespace TGC.Group.Model
             Mesh.UpdateMeshTransform();
             //Render del mesh
             Mesh.render();
-
+            lvl1.renderAll();
+            
             //Render de BoundingBox, muy útil para debug de colisiones.
             if (BoundingBox)
             {
