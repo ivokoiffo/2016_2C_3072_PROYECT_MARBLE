@@ -66,7 +66,7 @@ namespace TGC.Group.Model
             RotationSpeed = rotationSpeed;
         }
 
-        private TgcD3dInput Input { get; }
+		private TgcD3dInput Input { get; set; }
 
         public bool LockCam
         {
