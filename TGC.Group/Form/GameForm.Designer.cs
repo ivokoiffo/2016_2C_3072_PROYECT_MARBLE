@@ -38,6 +38,7 @@
             this.panel3D.Name = "panel3D";
             this.panel3D.Size = new System.Drawing.Size(784, 561);
             this.panel3D.TabIndex = 0;
+            this.panel3D.Paint += new System.Windows.Forms.PaintEventHandler(this.panel3D_Paint);
             // 
             // GameForm
             // 

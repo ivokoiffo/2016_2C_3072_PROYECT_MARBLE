@@ -196,5 +196,10 @@ namespace TGC.Group.Form
             D3DDevice.Instance.Dispose();
             TexturesPool.Instance.clearAll();
         }
+
+        private void panel3D_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
     }
 }

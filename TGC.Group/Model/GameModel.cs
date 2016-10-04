@@ -10,6 +10,9 @@ using TGC.Core.SceneLoader;
 using TGC.Core.Textures;
 using TGC.Core.Utils;
 using System;
+using TGC.Core.BoundingVolumes;
+using System.Collections.Generic;
+
 namespace TGC.Group.Model
 {
 	
@@ -21,7 +24,12 @@ namespace TGC.Group.Model
     /// </summary>
     public class GameModel : TgcExample
 	{
-		
+        private TgcScene escenario;
+        private TgcMesh unMesh;
+        double rot = -21304;
+        double variacion;
+        float larg = 4;
+        Matrix matris;
         /// <summary>
         ///     Constructor del juego.
         /// </summary>
@@ -101,12 +109,7 @@ namespace TGC.Group.Model
         ///     procesamiento que podemos pre calcular para nuestro juego.
         ///     Borrar el codigo ejemplo no utilizado.
         /// </summary>
-        private TgcScene lvl1;
-		private TgcMesh unMesh;
-		double rot=-21304;
-		double variacion;
-		float larg = 4;
-		Matrix matris;
+        
         public override void Init()
         {
             //Device de DirectX para crear primitivas.
@@ -134,12 +137,12 @@ namespace TGC.Group.Model
             Mesh.Scale = new Vector3(0.5f, 0.5f, 0.5f);
 
 
-			lvl1 = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapa con texturas + objetos-TgcScene.xml");
-			//Suelen utilizarse objetos que manejan el comportamiento de la camara.
-			//Lo que en realidad necesitamos gráficamente es una matriz de View.
-			//El framework maneja una cámara estática, pero debe ser inicializada.
-			//Posición de la camara.
-			unMesh = lvl1.Meshes.Find((TgcMesh obj) => obj.Name.Contains("Puerta"));
+			escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapa con texturas + objetos-TgcScene.xml");
+            //Suelen utilizarse objetos que manejan el comportamiento de la camara.
+            //Lo que en realidad necesitamos gráficamente es una matriz de View.
+            //El framework maneja una cámara estática, pero debe ser inicializada.
+            //Posición de la camara.
+            unMesh = escenario.Meshes.Find((TgcMesh obj) => obj.Name.Contains("Puerta"));
 			setMeshToOrigin(unMesh);
 			unMesh.Position = new Vector3(0, 0, 0);
 			larg =(new Vector2(unMesh.BoundingBox.PMin.X,unMesh.BoundingBox.PMin.Z)-new Vector2(unMesh.BoundingBox.PMax.X,unMesh.BoundingBox.PMax.Z)).Length()/2;
@@ -237,7 +240,7 @@ namespace TGC.Group.Model
 
 
 			DrawText.drawText(rot.ToString(), 0, 120, Color.Red);
-
+            escenario.renderAll();
 			unMesh.render();
 			unMesh.BoundingBox.render();
             
