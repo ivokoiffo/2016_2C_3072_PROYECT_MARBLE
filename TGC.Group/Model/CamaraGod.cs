@@ -14,7 +14,7 @@ namespace TGC.Group.Model
     ///     Ref: http://www.riemers.net/eng/Tutorials/XNA/Csharp/Series4/Mouse_camera.php
     ///     Autor: Rodrigo Garcia.
     /// </summary>
-    public class TgcFpsCamera : TgcCamera
+    public class CamaraGod : TgcCamera
     {
         private readonly Point mouseCenter; //Centro de mause 2D para ocultarlo.
 
@@ -31,7 +31,7 @@ namespace TGC.Group.Model
         private bool lockCam;
         private Vector3 positionEye;
 
-        public TgcFpsCamera(TgcD3dInput input)
+        public CamaraGod(TgcD3dInput input)
         {
             Input = input;
             positionEye = new Vector3();
@@ -47,19 +47,19 @@ namespace TGC.Group.Model
             cameraRotation = Matrix.RotationX(updownRot) * Matrix.RotationY(leftrightRot);
         }
 
-        public TgcFpsCamera(Vector3 positionEye, TgcD3dInput input) : this(input)
+        public CamaraGod(Vector3 positionEye, TgcD3dInput input) : this(input)
         {
             this.positionEye = positionEye;
         }
 
-        public TgcFpsCamera(Vector3 positionEye, float moveSpeed, float jumpSpeed, TgcD3dInput input)
+        public CamaraGod(Vector3 positionEye, float moveSpeed, float jumpSpeed, TgcD3dInput input)
             : this(positionEye, input)
         {
             MovementSpeed = moveSpeed;
             JumpSpeed = jumpSpeed;
         }
 
-        public TgcFpsCamera(Vector3 positionEye, float moveSpeed, float jumpSpeed, float rotationSpeed,
+        public CamaraGod(Vector3 positionEye, float moveSpeed, float jumpSpeed, float rotationSpeed,
             TgcD3dInput input)
             : this(positionEye, moveSpeed, jumpSpeed, input)
         {
@@ -94,7 +94,7 @@ namespace TGC.Group.Model
         /// <summary>
         ///     Cuando se elimina esto hay que desbloquear la camera.
         /// </summary>
-        ~TgcFpsCamera()
+        ~CamaraGod()
         {
             LockCam = false;
         }

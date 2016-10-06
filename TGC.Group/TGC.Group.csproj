@@ -85,7 +85,11 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Game.settings</DependentUpon>
     </Compile>
-    <Compile Include="Model\camara.cs" />
+    <Compile Include="Model\BoundingBoxCollider.cs" />
+    <Compile Include="Model\CamaraGod.cs" />
+    <Compile Include="Model\CamaraPrimeraPersona.cs" />
+    <Compile Include="Model\Collider.cs" />
+    <Compile Include="Model\ElipsoidCollisionManager.cs" />
     <Compile Include="Model\GameModel.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -28,11 +28,16 @@ namespace TGC.Group.Model
         private TgcScene escenario;
         private TgcSkeletalBoneAttach linterna;
         private TgcSkeletalMesh personaje;
-        private TgcBoundingSphere boundPersonaje;
+        private TgcBoundingElipsoid boundPersonaje;
         private TgcMesh unMesh;
         private bool flagGod = false;
         double rot = -21304;
+        private bool jumping;
         double variacion;
+        private float jumpingElapsedTime;
+        private readonly List<Collider> objetosColisionables = new List<Collider>();
+
+        private ElipsoidCollisionManager collisionManager;
         float larg = 4;
         /// <summary>
         ///     Constructor del juego.
@@ -107,13 +112,7 @@ namespace TGC.Group.Model
 
         //Boleano para ver si dibujamos el boundingbox
         private bool BoundingBox { get; set; }
-        /// <summary>
-        ///     Se llama una sola vez, al principio cuando se ejecuta el ejemplo.
-        ///     Escribir aquí todo el código de inicialización: cargar modelos, texturas, estructuras de optimización, todo
-        ///     procesamiento que podemos pre calcular para nuestro juego.
-        ///     Borrar el codigo ejemplo no utilizado.
-        /// </summary>
-        /// 
+
         private void initPuertaGiratoria() {
             unMesh = escenario.Meshes.Find((TgcMesh obj) => obj.Name.Contains("Puerta"));
             setMeshToOrigin(unMesh);
@@ -133,25 +132,16 @@ namespace TGC.Group.Model
                         MediaDir + "SkeletalAnimations\\BasicHuman\\Animations\\Jump-TgcSkeletalAnim.xml"
                     });
             //IMPORTANTE PREGUNTAR PORQUE DEBERIA ESTAR DESHABILITADO AUTOTRANSFORM
-            personaje.AutoTransformEnable = false;
-            //Configurar animacion inicial
-            personaje.playAnimation("StandBy", true);
+            personaje.AutoTransformEnable = true;
             //Escalarlo porque es muy grande
-            personaje.Position = new Vector3(0,-22, 0);
-            //Rotarlo 180° porque esta mirando para el otro lado
-            personaje.rotateY(Geometry.DegreeToRadian(180f));
-            //Escalamos el personaje ya que sino la escalera es demaciado grande.
+            personaje.Position = new Vector3(0,-17, 0);
+            //Escalamos el personaje ya que sino la escalera es demasiado grande.
             personaje.Scale = new Vector3(1.0f, 1.0f, 1.0f);
-            personaje.UpdateMeshTransform();
-            //BoundingSphere que va a usar el personaje
-            personaje.AutoUpdateBoundingBox = false;
-            boundPersonaje = new TgcBoundingSphere(personaje.BoundingBox.calculateBoxCenter(),personaje.BoundingBox.calculateBoxRadius());
+            boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter() + new Vector3(0, 0, 0), new Vector3(12, 28, 12));
+            jumping = false;
         }
         private void setLinterna() {
             //Crear caja como modelo de Attachment del hueos "Bip01 L Hand"
-            /*
-
-            */
             linterna = new TgcSkeletalBoneAttach();
             //TgcTexture texturaLinterna = TgcTexture.createTexture(GuiController.Instance.ExamplesMediaDir + "MeshCreator\\Textures\\Vegetacion\\pasto.jpg");
             //box = TgcBox.fromSize(posicionInicial, tamanioBox, pasto);
@@ -171,17 +161,22 @@ namespace TGC.Group.Model
             //Seteo el escenario
             escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapa-TgcScene.xml");
             setCamaraPrimeraPersona();
-            //Suelen utilizarse objetos que manejan el comportamiento de la camara.
-            //Lo que en realidad necesitamos gráficamente es una matriz de View.
-            //El framework maneja una cámara estática, pero debe ser inicializada.
-            //Posición de la camara.
-            //initPuertaGiratoria();
+            //initPuertaGiratoria();   
+            //Almacenar volumenes de colision del escenario
+            objetosColisionables.Clear();
+            foreach (var mesh in escenario.Meshes)
+            {
+                objetosColisionables.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
+            }
 
+            //Crear manejador de colisiones
+            collisionManager = new ElipsoidCollisionManager();
+            collisionManager.GravityEnabled = true;
 
         }
  
         private void godMod() {
-    
+            Camara = new CamaraGod(personaje.Position,Input);
         }
 
         private void animacionDePuerta() {
@@ -219,12 +214,159 @@ namespace TGC.Group.Model
             unMesh.move(new Vector3(System.Convert.ToSingle((larg - (Math.Cos(ang) * larg))), 0, System.Convert.ToSingle(Math.Sin(ang) * larg)));
         }
         private void setCamaraPrimeraPersona() {
-            Camara = new TgcFpsCamera(personaje.Position,Input);
+            Vector3 posicionConOffset = Vector3.Add(new Vector3(8,20,0),(boundPersonaje.Center));
+            Camara.SetCamera(posicionConOffset,new Vector3(0,0,0));
+        }
+        private void moverPersonaje() {
+            //seteo de velocidades
+            var velocidadCaminar = 1.0f;
+            var velocidadRotacion =1.0f;
+            var velocidadSalto = 1.0f;
+            var tiempoSalto = 1.0f;
+
+            //Calcular proxima posicion de personaje segun Input
+            var moveForward = 0f;
+            float rotate = 0;
+            var moving = false;
+            var rotating = false;
+            float jump = 0;
+
+            //Adelante
+            if (Input.keyDown(Key.W))
+            {
+                moveForward = -velocidadCaminar;
+                moving = true;
+            }
+
+            //Atras
+            if (Input.keyDown(Key.S))
+            {
+                moveForward = velocidadCaminar;
+                moving = true;
+            }
+
+            //Derecha
+            if (Input.keyDown(Key.D))
+            {
+                rotate = velocidadRotacion;
+                rotating = true;
+            }
+
+            //Izquierda
+            if (Input.keyDown(Key.A))
+            {
+                rotate = -velocidadRotacion;
+                rotating = true;
+            }
+
+            //Jump
+            if (!jumping && Input.keyPressed(Key.Space))
+            {
+                //Se puede saltar solo si hubo colision antes
+                if (collisionManager.Result.collisionFound)
+                {
+                    jumping = true;
+                    jumpingElapsedTime = 0f;
+                    jump = 0;
+                }
+            }
+
+            //Si hubo rotacion
+            if (rotating)
+            {
+                var rotAngle = Geometry.DegreeToRadian(rotate * ElapsedTime);
+                personaje.rotateY(rotAngle);
+            }
+
+            //Saltando
+            if (jumping)
+            {
+                //Activar animacion de saltando
+                personaje.playAnimation("Jump", true);
+            }
+            //Si hubo desplazamiento
+            else if (moving)
+            {
+                //Activar animacion de caminando
+                personaje.playAnimation("Walk", true);
+            }
+            //Si no se esta moviendo ni saltando, activar animacion de Parado
+            else
+            {
+                personaje.playAnimation("StandBy", true);
+            }
+
+            //Actualizar salto
+            if (jumping)
+            {
+                //El salto dura un tiempo hasta llegar a su fin
+                jumpingElapsedTime += ElapsedTime;
+                if (jumpingElapsedTime > tiempoSalto)
+                {
+                    jumping = false;
+                }
+                else
+                {
+                    jump = velocidadSalto * (tiempoSalto - jumpingElapsedTime);
+                }
+            }
+
+            //Vector de movimiento
+            var movementVector = Vector3.Empty;
+            if (moving || jumping)
+            {
+                //Aplicar movimiento, desplazarse en base a la rotacion actual del personaje
+                movementVector = new Vector3(
+                    FastMath.Sin(personaje.Rotation.Y) * moveForward,
+                    jump,
+                    FastMath.Cos(personaje.Rotation.Y) * moveForward
+                    );
+            }
+
+            //Actualizar valores de gravedad
+            collisionManager.GravityEnabled = true;
+            collisionManager.GravityForce = new Vector3(0f, 2f, 0f);
+
+            //Si esta saltando, desactivar gravedad
+            if (jumping)
+            {
+                collisionManager.GravityEnabled = false;
+            }
+
+            //Mover personaje con detección de colisiones, sliding y gravedad
+                //Aca se aplica toda la lógica de detección de colisiones del CollisionManager. Intenta mover el Elipsoide
+                //del personaje a la posición deseada. Retorna la verdadera posicion (realMovement) a la que se pudo mover
+                var realMovement = collisionManager.moveCharacter(boundPersonaje, movementVector,objetosColisionables);
+                personaje.move(realMovement);
+            /*
+            //Si estaba saltando y hubo colision de una superficie que mira hacia abajo, desactivar salto
+            if (jumping && collisionManager.Result.collisionNormal.Y < 0)
+            {
+                jumping = false;
+            }
+            */
+            /*
+            //Actualizar valores de normal de colision
+            if (collisionManager.Result.collisionFound)
+            {
+                collisionNormalArrow.PStart = collisionManager.Result.collisionPoint;
+                collisionNormalArrow.PEnd = collisionManager.Result.collisionPoint +
+                                            Vector3.Multiply(collisionManager.Result.collisionNormal, 80);
+
+                collisionNormalArrow.updateValues();
+
+
+                collisionPoint.Position = collisionManager.Result.collisionPoint;
+                collisionPoint.updateValues();
+
+            }*/
         }
         public override void Update()
         {
             PreUpdate();
+            moverPersonaje();
             //animacionDePuerta();
+
             if (Input.keyPressed(Key.G)){
                 if (!flagGod)
                 {
@@ -233,9 +375,12 @@ namespace TGC.Group.Model
                 }
                 else {
                     setCamaraPrimeraPersona();
+                    Camara.UpdateCamera(ElapsedTime);
                     flagGod = false;
                 }
-           }
+            }
+            setCamaraPrimeraPersona();
+            Camara.UpdateCamera(ElapsedTime);
         }
 
         private void renderPuerta() {
@@ -257,9 +402,9 @@ namespace TGC.Group.Model
                 //Renderizar modelo
                 mesh.render();
             }
-            linterna.Mesh.Enabled = true;
+            /*linterna.Mesh.Enabled = true;
             personaje.Attachments.Add(linterna);
-
+            */
             //Finaliza el render y presenta en pantalla, al igual que el preRender se debe para casos puntuales es mejor utilizar a mano las operaciones de EndScene y PresentScene
             PostRender();
         }
