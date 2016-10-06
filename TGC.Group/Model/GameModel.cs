@@ -26,9 +26,11 @@ namespace TGC.Group.Model
     public class GameModel : TgcExample
 	{
         private TgcScene escenario;
+        private TgcSkeletalBoneAttach linterna;
         private TgcSkeletalMesh personaje;
         private TgcBoundingSphere boundPersonaje;
         private TgcMesh unMesh;
+        private bool flagGod = false;
         double rot = -21304;
         double variacion;
         float larg = 4;
@@ -131,7 +133,7 @@ namespace TGC.Group.Model
                         MediaDir + "SkeletalAnimations\\BasicHuman\\Animations\\Jump-TgcSkeletalAnim.xml"
                     });
             //IMPORTANTE PREGUNTAR PORQUE DEBERIA ESTAR DESHABILITADO AUTOTRANSFORM
-            personaje.AutoTransformEnable = true;
+            personaje.AutoTransformEnable = false;
             //Configurar animacion inicial
             personaje.playAnimation("StandBy", true);
             //Escalarlo porque es muy grande
@@ -140,9 +142,24 @@ namespace TGC.Group.Model
             personaje.rotateY(Geometry.DegreeToRadian(180f));
             //Escalamos el personaje ya que sino la escalera es demaciado grande.
             personaje.Scale = new Vector3(1.0f, 1.0f, 1.0f);
+            personaje.UpdateMeshTransform();
             //BoundingSphere que va a usar el personaje
             personaje.AutoUpdateBoundingBox = false;
             boundPersonaje = new TgcBoundingSphere(personaje.BoundingBox.calculateBoxCenter(),personaje.BoundingBox.calculateBoxRadius());
+        }
+        private void setLinterna() {
+            //Crear caja como modelo de Attachment del hueos "Bip01 L Hand"
+            /*
+
+            */
+            linterna = new TgcSkeletalBoneAttach();
+            //TgcTexture texturaLinterna = TgcTexture.createTexture(GuiController.Instance.ExamplesMediaDir + "MeshCreator\\Textures\\Vegetacion\\pasto.jpg");
+            //box = TgcBox.fromSize(posicionInicial, tamanioBox, pasto);
+            var attachmentBox = TgcBox.fromSize(new Vector3(2, 10, 5), Color.Blue);
+            linterna.Mesh = attachmentBox.toMesh("attachment");
+            linterna.Bone = personaje.getBoneByName("Bip01 L Hand");
+            linterna.Offset = Matrix.Translation(8, 0, -10);
+            linterna.updateValues(); 
         }
         public override void Init()
         {
@@ -150,21 +167,21 @@ namespace TGC.Group.Model
             var d3dDevice = D3DDevice.Instance.Device;
             //Seteo el personaje
             seteoDePersonaje();
-
+            setLinterna();
             //Seteo el escenario
             escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapa-TgcScene.xml");
+            setCamaraPrimeraPersona();
             //Suelen utilizarse objetos que manejan el comportamiento de la camara.
             //Lo que en realidad necesitamos gráficamente es una matriz de View.
             //El framework maneja una cámara estática, pero debe ser inicializada.
             //Posición de la camara.
             //initPuertaGiratoria();
-            
 
-		}
+
+        }
  
-        private void godMod(Vector3 posicion,Vector3 lookAt) {
-            Camara.SetCamera(posicion, lookAt);
-            Camara = new TgcFpsCamera(posicion, Input);
+        private void godMod() {
+    
         }
 
         private void animacionDePuerta() {
@@ -201,14 +218,24 @@ namespace TGC.Group.Model
             unMesh.Rotation = new Vector3(0, ang, 0);
             unMesh.move(new Vector3(System.Convert.ToSingle((larg - (Math.Cos(ang) * larg))), 0, System.Convert.ToSingle(Math.Sin(ang) * larg)));
         }
+        private void setCamaraPrimeraPersona() {
+            Camara = new TgcFpsCamera(personaje.Position,Input);
+        }
         public override void Update()
         {
             PreUpdate();
             //animacionDePuerta();
-            if (Input.keyPressed(Key.G))
-            {
-                godMod(Camara.Position, Camara.LookAt);
-            }
+            if (Input.keyPressed(Key.G)){
+                if (!flagGod)
+                {
+                    godMod();
+                    flagGod = true;
+                }
+                else {
+                    setCamaraPrimeraPersona();
+                    flagGod = false;
+                }
+           }
         }
 
         private void renderPuerta() {
@@ -221,7 +248,7 @@ namespace TGC.Group.Model
             //Inicio el render de la escena, para ejemplos simples. Cuando tenemos postprocesado o shaders es mejor realizar las operaciones según nuestra conveniencia.
             PreRender();
             DrawText.drawText("[G]-Habilita GodMod ",0,20, Color.OrangeRed);
-           DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(Camara.Position), 0, 30,Color.OrangeRed);
+            DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(Camara.Position), 0, 30,Color.OrangeRed);
       
             //renderPuerta();
             personaje.animateAndRender(ElapsedTime);
@@ -230,6 +257,9 @@ namespace TGC.Group.Model
                 //Renderizar modelo
                 mesh.render();
             }
+            linterna.Mesh.Enabled = true;
+            personaje.Attachments.Add(linterna);
+
             //Finaliza el render y presenta en pantalla, al igual que el preRender se debe para casos puntuales es mejor utilizar a mano las operaciones de EndScene y PresentScene
             PostRender();
         }
@@ -237,6 +267,7 @@ namespace TGC.Group.Model
         public override void Dispose()
         {
             escenario.disposeAll();
+            personaje.Attachments.Clear();
             personaje.dispose();
         }
     }
