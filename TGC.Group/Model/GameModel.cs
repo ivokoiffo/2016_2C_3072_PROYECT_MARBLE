@@ -32,7 +32,6 @@ namespace TGC.Group.Model
         double rot = -21304;
         double variacion;
         float larg = 4;
-        Matrix matris;
         /// <summary>
         ///     Constructor del juego.
         /// </summary>
@@ -124,32 +123,26 @@ namespace TGC.Group.Model
             var skeletalLoader = new TgcSkeletalLoader();
             personaje =
                 skeletalLoader.loadMeshAndAnimationsFromFile(
-                    MediaDir + "SkeletalAnimations\\Robot\\Robot-TgcSkeletalMesh.xml",
-                    MediaDir + "SkeletalAnimations\\Robot\\",
+                    MediaDir + "SkeletalAnimations\\BasicHuman\\BasicHuman-TgcSkeletalMesh.xml",
                     new[]
                     {
-                        MediaDir + "SkeletalAnimations\\Robot\\Caminando-TgcSkeletalAnim.xml",
-                        MediaDir + "SkeletalAnimations\\Robot\\Parado-TgcSkeletalAnim.xml"
+                        MediaDir + "SkeletalAnimations\\BasicHuman\\Animations\\Walk-TgcSkeletalAnim.xml",
+                        MediaDir + "SkeletalAnimations\\BasicHuman\\Animations\\StandBy-TgcSkeletalAnim.xml",
+                        MediaDir + "SkeletalAnimations\\BasicHuman\\Animations\\Jump-TgcSkeletalAnim.xml"
                     });
+            //IMPORTANTE PREGUNTAR PORQUE DEBERIA ESTAR DESHABILITADO AUTOTRANSFORM
             personaje.AutoTransformEnable = true;
-            //CAMBIO DE TEXTURA
-            personaje.changeDiffuseMaps(new[]
-            {
-                TgcTexture.createTexture(D3DDevice.Instance.Device,
-                    MediaDir + "SkeletalAnimations\\Robot\\Textures\\uvwGreen.jpg")
-            });
             //Configurar animacion inicial
-            personaje.playAnimation("Parado", true);
+            personaje.playAnimation("StandBy", true);
             //Escalarlo porque es muy grande
             personaje.Position = new Vector3(0,-22, 0);
             //Rotarlo 180° porque esta mirando para el otro lado
             personaje.rotateY(Geometry.DegreeToRadian(180f));
             //Escalamos el personaje ya que sino la escalera es demaciado grande.
-            personaje.Scale = new Vector3(0.5f, 0.4f, 0.5f);
+            personaje.Scale = new Vector3(1.0f, 1.0f, 1.0f);
             //BoundingSphere que va a usar el personaje
             personaje.AutoUpdateBoundingBox = false;
-            boundPersonaje = new TgcBoundingSphere(personaje.BoundingBox.calculateBoxCenter(),
-                personaje.BoundingBox.calculateBoxRadius());
+            boundPersonaje = new TgcBoundingSphere(personaje.BoundingBox.calculateBoxCenter(),personaje.BoundingBox.calculateBoxRadius());
         }
         public override void Init()
         {
@@ -165,22 +158,15 @@ namespace TGC.Group.Model
             //El framework maneja una cámara estática, pero debe ser inicializada.
             //Posición de la camara.
             //initPuertaGiratoria();
-			var cameraPosition = new Vector3(0, 0, 125);
-            //Quiero que la camara mire hacia el origen (0,0,0).
-            var lookAt = Vector3.Empty;
-            //Configuro donde esta la posicion de la camara y hacia donde mira.
-            Camara.SetCamera(cameraPosition, lookAt);
-            Camara = new TgcFpsCamera(cameraPosition, Input);
-			//Internamente el framework construye la matriz de view con estos dos vectores.
-			//Luego en nuestro juego tendremos que crear una cámara que cambie la matriz de view con variables como movimientos o animaciones de escenas
+            
+
 		}
+ 
+        private void godMod(Vector3 posicion,Vector3 lookAt) {
+            Camara.SetCamera(posicion, lookAt);
+            Camara = new TgcFpsCamera(posicion, Input);
+        }
 
-
-        /// <summary>
-        ///     Se llama en cada frame.
-        ///     Se debe escribir toda la lógica de computo del modelo, así como también verificar entradas del usuario y reacciones
-        ///     ante ellas.
-        /// </summary>
         private void animacionDePuerta() {
             //Capturar Input Mouse
             if (Input.keyPressed(Key.U))
@@ -219,14 +205,12 @@ namespace TGC.Group.Model
         {
             PreUpdate();
             //animacionDePuerta();
-            
-		}
+            if (Input.keyPressed(Key.G))
+            {
+                godMod(Camara.Position, Camara.LookAt);
+            }
+        }
 
-        /// <summary>
-        ///     Se llama cada vez que hay que refrescar la pantalla.
-        ///     Escribir aquí todo el código referido al renderizado.
-        ///     Borrar todo lo que no haga falta.
-        /// </summary>
         private void renderPuerta() {
             unMesh.render();
             unMesh.BoundingBox.render();
@@ -236,7 +220,8 @@ namespace TGC.Group.Model
         {
             //Inicio el render de la escena, para ejemplos simples. Cuando tenemos postprocesado o shaders es mejor realizar las operaciones según nuestra conveniencia.
             PreRender();
-            DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(Camara.Position), 0, 30,Color.OrangeRed);
+            DrawText.drawText("[G]-Habilita GodMod ",0,20, Color.OrangeRed);
+           DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(Camara.Position), 0, 30,Color.OrangeRed);
       
             //renderPuerta();
             personaje.animateAndRender(ElapsedTime);
@@ -245,23 +230,10 @@ namespace TGC.Group.Model
                 //Renderizar modelo
                 mesh.render();
             }
-
-            //Render de BoundingBox, muy útil para debug de colisiones.
-            if (BoundingBox)
-            {
-                Box.BoundingBox.render();
-                Mesh.BoundingBox.render();
-            }
-
             //Finaliza el render y presenta en pantalla, al igual que el preRender se debe para casos puntuales es mejor utilizar a mano las operaciones de EndScene y PresentScene
             PostRender();
         }
 
-        /// <summary>
-        ///     Se llama cuando termina la ejecución del ejemplo.
-        ///     Hacer Dispose() de todos los objetos creados.
-        ///     Es muy importante liberar los recursos, sobretodo los gráficos ya que quedan bloqueados en el device de video.
-        /// </summary>
         public override void Dispose()
         {
             escenario.disposeAll();
