@@ -12,6 +12,7 @@ using TGC.Core.Utils;
 using System;
 using TGC.Core.BoundingVolumes;
 using System.Collections.Generic;
+using TGC.Core.SkeletalAnimation;
 
 namespace TGC.Group.Model
 {
@@ -25,6 +26,8 @@ namespace TGC.Group.Model
     public class GameModel : TgcExample
 	{
         private TgcScene escenario;
+        private TgcSkeletalMesh personaje;
+        private TgcBoundingSphere boundPersonaje;
         private TgcMesh unMesh;
         double rot = -21304;
         double variacion;
@@ -109,43 +112,59 @@ namespace TGC.Group.Model
         ///     procesamiento que podemos pre calcular para nuestro juego.
         ///     Borrar el codigo ejemplo no utilizado.
         /// </summary>
-        
+        /// 
+        private void initPuertaGiratoria() {
+            unMesh = escenario.Meshes.Find((TgcMesh obj) => obj.Name.Contains("Puerta"));
+            setMeshToOrigin(unMesh);
+            unMesh.Position = new Vector3(0, 0, 0);
+            larg = (new Vector2(unMesh.BoundingBox.PMin.X, unMesh.BoundingBox.PMin.Z) - new Vector2(unMesh.BoundingBox.PMax.X, unMesh.BoundingBox.PMax.Z)).Length() / 2;
+        }
+        private void seteoDePersonaje() {
+            //Cargar personaje con animaciones
+            var skeletalLoader = new TgcSkeletalLoader();
+            personaje =
+                skeletalLoader.loadMeshAndAnimationsFromFile(
+                    MediaDir + "SkeletalAnimations\\Robot\\Robot-TgcSkeletalMesh.xml",
+                    MediaDir + "SkeletalAnimations\\Robot\\",
+                    new[]
+                    {
+                        MediaDir + "SkeletalAnimations\\Robot\\Caminando-TgcSkeletalAnim.xml",
+                        MediaDir + "SkeletalAnimations\\Robot\\Parado-TgcSkeletalAnim.xml"
+                    });
+            personaje.AutoTransformEnable = true;
+            //CAMBIO DE TEXTURA
+            personaje.changeDiffuseMaps(new[]
+            {
+                TgcTexture.createTexture(D3DDevice.Instance.Device,
+                    MediaDir + "SkeletalAnimations\\Robot\\Textures\\uvwGreen.jpg")
+            });
+            //Configurar animacion inicial
+            personaje.playAnimation("Parado", true);
+            //Escalarlo porque es muy grande
+            personaje.Position = new Vector3(0,-22, 0);
+            //Rotarlo 180° porque esta mirando para el otro lado
+            personaje.rotateY(Geometry.DegreeToRadian(180f));
+            //Escalamos el personaje ya que sino la escalera es demaciado grande.
+            personaje.Scale = new Vector3(0.5f, 0.4f, 0.5f);
+            //BoundingSphere que va a usar el personaje
+            personaje.AutoUpdateBoundingBox = false;
+            boundPersonaje = new TgcBoundingSphere(personaje.BoundingBox.calculateBoxCenter(),
+                personaje.BoundingBox.calculateBoxRadius());
+        }
         public override void Init()
         {
             //Device de DirectX para crear primitivas.
             var d3dDevice = D3DDevice.Instance.Device;
+            //Seteo el personaje
+            seteoDePersonaje();
 
-            //Textura de la carperta Media. Game.Default es un archivo de configuracion (Game.settings) util para poner cosas.
-            //Pueden abrir el Game.settings que se ubica dentro de nuestro proyecto para configurar.
-            var pathTexturaCaja = MediaDir + Game.Default.TexturaCaja;
-
-            //Cargamos una textura, tener en cuenta que cargar una textura significa crear una copia en memoria.
-            //Es importante cargar texturas en Init, si se hace en el render loop podemos tener grandes problemas si instanciamos muchas.
-            var texture = TgcTexture.createTexture(pathTexturaCaja);
-
-            //Creamos una caja 3D ubicada de dimensiones (5, 10, 5) y la textura como color.
-            var size = new Vector3(5, 10, 5);
-            //Construimos una caja según los parámetros, por defecto la misma se crea con centro en el origen y se recomienda así para facilitar las transformaciones.
-            Box = TgcBox.fromSize(size, texture);
-            //Posición donde quiero que este la caja, es común que se utilicen estructuras internas para las transformaciones.
-            //Entonces actualizamos la posición lógica, luego podemos utilizar esto en render para posicionar donde corresponda con transformaciones.
-            Box.Position = new Vector3(-25, 0, 0);
-
-            //Cargo el unico mesh que tiene la escena.
-            Mesh = new TgcSceneLoader().loadSceneFromFile(MediaDir + "LogoTGC-TgcScene.xml").Meshes[0];
-            //Defino una escala en el modelo logico del mesh que es muy grande.
-            Mesh.Scale = new Vector3(0.5f, 0.5f, 0.5f);
-
-
-			escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapa con texturas + objetos-TgcScene.xml");
+            //Seteo el escenario
+            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapa-TgcScene.xml");
             //Suelen utilizarse objetos que manejan el comportamiento de la camara.
             //Lo que en realidad necesitamos gráficamente es una matriz de View.
             //El framework maneja una cámara estática, pero debe ser inicializada.
             //Posición de la camara.
-            unMesh = escenario.Meshes.Find((TgcMesh obj) => obj.Name.Contains("Puerta"));
-			setMeshToOrigin(unMesh);
-			unMesh.Position = new Vector3(0, 0, 0);
-			larg =(new Vector2(unMesh.BoundingBox.PMin.X,unMesh.BoundingBox.PMin.Z)-new Vector2(unMesh.BoundingBox.PMax.X,unMesh.BoundingBox.PMax.Z)).Length()/2;
+            //initPuertaGiratoria();
 			var cameraPosition = new Vector3(0, 0, 125);
             //Quiero que la camara mire hacia el origen (0,0,0).
             var lookAt = Vector3.Empty;
@@ -162,44 +181,45 @@ namespace TGC.Group.Model
         ///     Se debe escribir toda la lógica de computo del modelo, así como también verificar entradas del usuario y reacciones
         ///     ante ellas.
         /// </summary>
+        private void animacionDePuerta() {
+            //Capturar Input Mouse
+            if (Input.keyPressed(Key.U))
+            {
+                //Como ejemplo podemos hacer un movimiento simple de la cámara.
+                //En este caso le sumamos un valor en Y
+                ///Camara.SetCamera(Camara.Position + new Vector3(0, 10f, 0), Camara.LookAt);
+                //Ver ejemplos de cámara para otras operaciones posibles.
+                unMesh.Position = new Vector3(0, 0, 0);
+                unMesh.Rotation = new Vector3(0, System.Convert.ToSingle(rot), 0);
+                unMesh.move(new Vector3(System.Convert.ToSingle((larg - (Math.Cos(rot + 3.14) * larg))), 0, System.Convert.ToSingle(Math.Sin(rot + 3.14) * larg)));
+
+                //Si superamos cierto Y volvemos a la posición original.
+                //if (Camara.Position.Y > 300f)
+                // {
+                //     Camara.SetCamera(new Vector3(Camara.Position.X, 0f, Camara.Position.Z), Camara.LookAt);
+                //  }
+            }
+            if (rot >= 1.57)
+            {
+                rot = 1.57;
+                variacion = -0.9 * ElapsedTime;
+            };
+            if (rot <= 0)
+            {
+                rot = 0;
+                variacion = 0.9 * ElapsedTime;
+            };
+            rot += variacion;
+            var ang = System.Convert.ToSingle(rot);
+            unMesh.Position = new Vector3(0, 0, 0);
+            unMesh.Rotation = new Vector3(0, ang, 0);
+            unMesh.move(new Vector3(System.Convert.ToSingle((larg - (Math.Cos(ang) * larg))), 0, System.Convert.ToSingle(Math.Sin(ang) * larg)));
+        }
         public override void Update()
         {
             PreUpdate();
-
-            //Capturar Input teclado
-            if (Input.keyPressed(Key.F))
-            {
-                BoundingBox = !BoundingBox;
-            }
-
-            //Capturar Input Mouse
-			if (Input.keyPressed(Key.U))
-            {
-				//Como ejemplo podemos hacer un movimiento simple de la cámara.
-				//En este caso le sumamos un valor en Y
-				///Camara.SetCamera(Camara.Position + new Vector3(0, 10f, 0), Camara.LookAt);
-				//Ver ejemplos de cámara para otras operaciones posibles.
-				unMesh.Position = new Vector3(0, 0, 0);
-				unMesh.Rotation = new Vector3(0, System.Convert.ToSingle(rot), 0);
-				unMesh.move(new Vector3(System.Convert.ToSingle((larg-(Math.Cos(rot+3.14)*larg))),0,System.Convert.ToSingle(Math.Sin(rot+3.14) * larg)));
-
-				//Si superamos cierto Y volvemos a la posición original.
-				//if (Camara.Position.Y > 300f)
-				// {
-				//     Camara.SetCamera(new Vector3(Camara.Position.X, 0f, Camara.Position.Z), Camara.LookAt);
-				//  }
-			}
-			if (rot >= 1.57) {
-				rot = 1.57;
-				variacion= -0.9*ElapsedTime; };
-			if (rot <= 0) {
-				rot = 0;
-				variacion = 0.9 * ElapsedTime; };
-			rot += variacion;
-			var ang = System.Convert.ToSingle(rot);
-			unMesh.Position = new Vector3(0, 0, 0);
-			unMesh.Rotation = new Vector3(0, ang, 0);
-			unMesh.move(new Vector3(System.Convert.ToSingle((larg - (Math.Cos(ang) * larg))), 0, System.Convert.ToSingle(Math.Sin(ang) * larg)));
+            //animacionDePuerta();
+            
 		}
 
         /// <summary>
@@ -207,43 +227,25 @@ namespace TGC.Group.Model
         ///     Escribir aquí todo el código referido al renderizado.
         ///     Borrar todo lo que no haga falta.
         /// </summary>
+        private void renderPuerta() {
+            unMesh.render();
+            unMesh.BoundingBox.render();
+            DrawText.drawText(unMesh.Position.ToString(), 0, 50, Color.Red);
+        }
         public override void Render()
         {
             //Inicio el render de la escena, para ejemplos simples. Cuando tenemos postprocesado o shaders es mejor realizar las operaciones según nuestra conveniencia.
             PreRender();
+            DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(Camara.Position), 0, 30,Color.OrangeRed);
+      
+            //renderPuerta();
+            personaje.animateAndRender(ElapsedTime);
+            foreach (var mesh in escenario.Meshes)
+            {
+                //Renderizar modelo
+                mesh.render();
+            }
 
-            //Dibuja un texto por pantalla
-            DrawText.drawText("Con la tecla F se dibuja el bounding box.", 0, 20, Color.OrangeRed);
-            DrawText.drawText(
-                "Con clic izquierdo subimos la camara [Actual]: " + TgcParserUtils.printVector3(Camara.Position), 0, 30,
-                Color.OrangeRed);
-
-            //Siempre antes de renderizar el modelo necesitamos actualizar la matriz de transformacion.
-            //Debemos recordar el orden en cual debemos multiplicar las matrices, en caso de tener modelos jerárquicos, tenemos control total.
-            Box.Transform = Matrix.Scaling(Box.Scale) *
-                            Matrix.RotationYawPitchRoll(Box.Rotation.Y, Box.Rotation.X, Box.Rotation.Z) *
-                            Matrix.Translation(Box.Position);
-			//A modo ejemplo realizamos toda las multiplicaciones, pero aquí solo nos hacia falta la traslación.
-			//Finalmente invocamos al render de la caja
-
-
-			Box.render();
-
-            //Cuando tenemos modelos mesh podemos utilizar un método que hace la matriz de transformación estándar.
-            //Es útil cuando tenemos transformaciones simples, pero OJO cuando tenemos transformaciones jerárquicas o complicadas.
-            Mesh.UpdateMeshTransform();
-
-            //Render del mesh
-            Mesh.render();
-
-			DrawText.drawText(unMesh.Position.ToString(), 0, 50, Color.Red);
-
-
-			DrawText.drawText(rot.ToString(), 0, 120, Color.Red);
-            escenario.renderAll();
-			unMesh.render();
-			unMesh.BoundingBox.render();
-            
             //Render de BoundingBox, muy útil para debug de colisiones.
             if (BoundingBox)
             {
@@ -262,10 +264,8 @@ namespace TGC.Group.Model
         /// </summary>
         public override void Dispose()
         {
-            //Dispose de la caja.
-            Box.dispose();
-            //Dispose del mesh.
-            Mesh.dispose();
+            escenario.disposeAll();
+            personaje.dispose();
         }
     }
 }
