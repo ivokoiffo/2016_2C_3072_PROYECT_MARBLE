@@ -16,13 +16,6 @@ using TGC.Core.SkeletalAnimation;
 
 namespace TGC.Group.Model
 {
-	
-    /// <summary>
-    ///     Ejemplo para implementar el TP.
-    ///     Inicialmente puede ser renombrado o copiado para hacer más ejemplos chicos, en el caso de copiar para que se
-    ///     ejecute el nuevo ejemplo deben cambiar el modelo que instancia GameForm <see cref="Form.GameForm.InitGraphics()" />
-    ///     line 97.
-    /// </summary>
     public class GameModel : TgcExample
 	{
         private TgcScene escenario;
@@ -31,7 +24,15 @@ namespace TGC.Group.Model
         private TgcBoundingElipsoid boundPersonaje;
         private TgcMesh unMesh;
         private bool flagGod = false;
-        double rot = -21304;
+		private Matrix cameraRotation;
+		private float leftrightRot;
+		private float updownRot;
+		public float RotationSpeed { get; set; }
+		private Vector3 viewVector;
+
+
+
+		double rot = -21304;
         private bool jumping;
         double variacion;
         private float jumpingElapsedTime;
@@ -39,72 +40,15 @@ namespace TGC.Group.Model
 
         private ElipsoidCollisionManager collisionManager;
         float larg = 4;
-        /// <summary>
-        ///     Constructor del juego.
-        /// </summary>
-        /// <param name="mediaDir">Ruta donde esta la carpeta con los assets</param>
-        /// <param name="shadersDir">Ruta donde esta la carpeta con los shaders</param>
-        public GameModel(string mediaDir, string shadersDir) : base(mediaDir, shadersDir)
+       
+		public GameModel(string mediaDir, string shadersDir) : base(mediaDir, shadersDir)
         {
             Category = Game.Default.Category;
             Name = Game.Default.Name;
             Description = Game.Default.Description;
         }
 
-		private TgcMesh setMeshToOrigin(TgcMesh mesh)
-		{
-			//Desplazar los vertices del mesh para que tengan el centro del AABB en el origen
-			var center = mesh.BoundingBox.calculateBoxCenter();
-			mesh=moveMeshVertices(-center,mesh);
-
-			//Ubicar el mesh en donde estaba originalmente
-			mesh.BoundingBox.setExtremes(mesh.BoundingBox.PMin - center, mesh.BoundingBox.PMax - center);
-			mesh.Position = center;
-			return mesh;
-		}
-
-		private TgcMesh moveMeshVertices(Vector3 offset,TgcMesh mesh)
-		{	
-			switch (mesh.RenderType)
-			{
-			case TgcMesh.MeshRenderType.VERTEX_COLOR:
-				var verts1 = (TgcSceneLoader.VertexColorVertex[])mesh.D3dMesh.LockVertexBuffer(
-					typeof(TgcSceneLoader.VertexColorVertex), LockFlags.ReadOnly, mesh.D3dMesh.NumberVertices);
-				for (var i = 0; i < verts1.Length; i++)
-				{
-					verts1[i].Position = verts1[i].Position + offset;
-				}
-				mesh.D3dMesh.SetVertexBufferData(verts1, LockFlags.None);
-				mesh.D3dMesh.UnlockVertexBuffer();
-					return mesh;
-			
-
-			case TgcMesh.MeshRenderType.DIFFUSE_MAP:
-				var verts2 = (TgcSceneLoader.DiffuseMapVertex[])mesh.D3dMesh.LockVertexBuffer(
-					typeof(TgcSceneLoader.DiffuseMapVertex), LockFlags.ReadOnly, mesh.D3dMesh.NumberVertices);
-				for (var i = 0; i < verts2.Length; i++)
-				{
-					verts2[i].Position = verts2[i].Position + offset;
-				}
-				mesh.D3dMesh.SetVertexBufferData(verts2, LockFlags.None);
-				mesh.D3dMesh.UnlockVertexBuffer();
-				return mesh;
-
-			case TgcMesh.MeshRenderType.DIFFUSE_MAP_AND_LIGHTMAP:
-				var verts3 = (TgcSceneLoader.DiffuseMapAndLightmapVertex[])mesh.D3dMesh.LockVertexBuffer(
-					typeof(TgcSceneLoader.DiffuseMapAndLightmapVertex), LockFlags.ReadOnly,
-					mesh.D3dMesh.NumberVertices);
-				for (var i = 0; i < verts3.Length; i++)
-				{
-					verts3[i].Position = verts3[i].Position + offset;
-				}
-				mesh.D3dMesh.SetVertexBufferData(verts3, LockFlags.None);
-				mesh.D3dMesh.UnlockVertexBuffer();
-				return mesh;
-			}
-			return mesh;
-		}
-        //Caja que se muestra en el ejemplo.
+		//Caja que se muestra en el ejemplo.
         private TgcBox Box { get; set; }
 
         //Mesh de TgcLogo.
@@ -113,12 +57,6 @@ namespace TGC.Group.Model
         //Boleano para ver si dibujamos el boundingbox
         private bool BoundingBox { get; set; }
 
-        private void initPuertaGiratoria() {
-            unMesh = escenario.Meshes.Find((TgcMesh obj) => obj.Name.Contains("Puerta"));
-            setMeshToOrigin(unMesh);
-            unMesh.Position = new Vector3(0, 0, 0);
-            larg = (new Vector2(unMesh.BoundingBox.PMin.X, unMesh.BoundingBox.PMin.Z) - new Vector2(unMesh.BoundingBox.PMax.X, unMesh.BoundingBox.PMax.Z)).Length() / 2;
-        }
         private void seteoDePersonaje() {
             //Cargar personaje con animaciones
             var skeletalLoader = new TgcSkeletalLoader();
@@ -157,13 +95,16 @@ namespace TGC.Group.Model
             var d3dDevice = D3DDevice.Instance.Device;
             //Seteo el personaje
             seteoDePersonaje();
-            setLinterna();
+           // setLinterna();
             //Seteo el escenario
             escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapa-TgcScene.xml");
-            setCamaraPrimeraPersona();
-            //initPuertaGiratoria();   
-            //Almacenar volumenes de colision del escenario
-            objetosColisionables.Clear();
+			leftrightRot = FastMath.PI_HALF;
+			updownRot = -FastMath.PI / 10.0f;
+			cameraRotation = Matrix.RotationX(updownRot) * Matrix.RotationY(leftrightRot);
+			RotationSpeed = 0.1f;
+			//initPuertaGiratoria();   
+			//Almacenar volumenes de colision del escenario
+			objetosColisionables.Clear();
             foreach (var mesh in escenario.Meshes)
             {
                 objetosColisionables.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
@@ -213,14 +154,14 @@ namespace TGC.Group.Model
             unMesh.Rotation = new Vector3(0, ang, 0);
             unMesh.move(new Vector3(System.Convert.ToSingle((larg - (Math.Cos(ang) * larg))), 0, System.Convert.ToSingle(Math.Sin(ang) * larg)));
         }
-        private void setCamaraPrimeraPersona() {
+        private void setCamaraPrimeraPersona(Vector3 lookAt) {
             Vector3 posicionConOffset = Vector3.Add(new Vector3(8,20,0),(boundPersonaje.Center));
-            Camara.SetCamera(posicionConOffset,new Vector3(0,0,0));
+            Camara.SetCamera(posicionConOffset,lookAt);
         }
         private void moverPersonaje() {
             //seteo de velocidades
             var velocidadCaminar = 1.0f;
-            var velocidadRotacion =1.0f;
+			var velocidadRotacion =25;
             var velocidadSalto = 1.0f;
             var tiempoSalto = 1.0f;
 
@@ -230,7 +171,7 @@ namespace TGC.Group.Model
             var moving = false;
             var rotating = false;
             float jump = 0;
-
+			var marchaAtras = false;
             //Adelante
             if (Input.keyDown(Key.W))
             {
@@ -243,14 +184,16 @@ namespace TGC.Group.Model
             {
                 moveForward = velocidadCaminar;
                 moving = true;
-            }
+        		marchaAtras = true;
+
+			}
 
             //Derecha
             if (Input.keyDown(Key.D))
             {
                 rotate = velocidadRotacion;
                 rotating = true;
-            }
+		    }
 
             //Izquierda
             if (Input.keyDown(Key.A))
@@ -259,17 +202,6 @@ namespace TGC.Group.Model
                 rotating = true;
             }
 
-            //Jump
-            if (!jumping && Input.keyPressed(Key.Space))
-            {
-                //Se puede saltar solo si hubo colision antes
-                if (collisionManager.Result.collisionFound)
-                {
-                    jumping = true;
-                    jumpingElapsedTime = 0f;
-                    jump = 0;
-                }
-            }
 
             //Si hubo rotacion
             if (rotating)
@@ -278,13 +210,6 @@ namespace TGC.Group.Model
                 personaje.rotateY(rotAngle);
             }
 
-            //Saltando
-            if (jumping)
-            {
-                //Activar animacion de saltando
-                personaje.playAnimation("Jump", true);
-            }
-            //Si hubo desplazamiento
             else if (moving)
             {
                 //Activar animacion de caminando
@@ -296,24 +221,13 @@ namespace TGC.Group.Model
                 personaje.playAnimation("StandBy", true);
             }
 
-            //Actualizar salto
-            if (jumping)
-            {
-                //El salto dura un tiempo hasta llegar a su fin
-                jumpingElapsedTime += ElapsedTime;
-                if (jumpingElapsedTime > tiempoSalto)
-                {
-                    jumping = false;
-                }
-                else
-                {
-                    jump = velocidadSalto * (tiempoSalto - jumpingElapsedTime);
-                }
-            }
 
             //Vector de movimiento
             var movementVector = Vector3.Empty;
-            if (moving || jumping)
+			var leftrightRotPrevius= leftrightRot-Input.XposRelative * RotationSpeed;
+			var updownRotPrevius = updownRot + Input.YposRelative * RotationSpeed;
+
+			if (moving)
             {
                 //Aplicar movimiento, desplazarse en base a la rotacion actual del personaje
                 movementVector = new Vector3(
@@ -321,17 +235,22 @@ namespace TGC.Group.Model
                     jump,
                     FastMath.Cos(personaje.Rotation.Y) * moveForward
                     );
-            }
+				//Se actualiza matrix de rotacion, para no hacer este calculo cada vez y solo cuando en verdad es necesario.
+				if(!marchaAtras) viewVector = movementVector; //Solo cambia el vector de view si no esta caminando para atras
+			}
+			//maximos para los giros del vectorDeView
+			if (-1f < leftrightRotPrevius && leftrightRotPrevius <1f ) {leftrightRot-=Input.XposRelative*RotationSpeed;};
+			if (-1f < updownRotPrevius && updownRotPrevius < 1f) { updownRot += Input.YposRelative * RotationSpeed;  };
+			cameraRotation = Matrix.RotationY(-leftrightRot) * Matrix.RotationX(-updownRot); //calcula la rotacion del vector de view
+			var cameraFinalTarget = Vector3.TransformNormal(viewVector, cameraRotation) * 1000; //direccion en que se mueve girada respecto la rotacion de la camara
+			Vector3 lookAt = Vector3.Add(boundPersonaje.Center, cameraFinalTarget); //vector lookAt final
+			setCamaraPrimeraPersona(lookAt);//se lo paso al setCamara
 
-            //Actualizar valores de gravedad
+			  //Actualizar valores de gravedad
             collisionManager.GravityEnabled = true;
             collisionManager.GravityForce = new Vector3(0f, 2f, 0f);
 
-            //Si esta saltando, desactivar gravedad
-            if (jumping)
-            {
-                collisionManager.GravityEnabled = false;
-            }
+        
 
             //Mover personaje con detección de colisiones, sliding y gravedad
                 //Aca se aplica toda la lógica de detección de colisiones del CollisionManager. Intenta mover el Elipsoide
@@ -374,12 +293,10 @@ namespace TGC.Group.Model
                     flagGod = true;
                 }
                 else {
-                    setCamaraPrimeraPersona();
-                    Camara.UpdateCamera(ElapsedTime);
+                     Camara.UpdateCamera(ElapsedTime);
                     flagGod = false;
                 }
             }
-            setCamaraPrimeraPersona();
             Camara.UpdateCamera(ElapsedTime);
         }
 
@@ -397,7 +314,8 @@ namespace TGC.Group.Model
       
             //renderPuerta();
             personaje.animateAndRender(ElapsedTime);
-            foreach (var mesh in escenario.Meshes)
+
+			foreach (var mesh in escenario.Meshes)
             {
                 //Renderizar modelo
                 mesh.render();
