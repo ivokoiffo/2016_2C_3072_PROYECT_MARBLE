@@ -89,9 +89,11 @@
     <Compile Include="Model\BoundingBoxCollider.cs" />
     <Compile Include="Model\CamaraGod.cs" />
     <Compile Include="Model\CamaraPrimeraPersona.cs" />
+    <Compile Include="Model\Checkpoint.cs" />
     <Compile Include="Model\Collider.cs" />
     <Compile Include="Model\ElipsoidCollisionManager.cs" />
     <Compile Include="Model\GameModel.cs" />
+    <Compile Include="Model\Utils\CollitionManager.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Form\GameForm.resx">
@@ -160,6 +162,9 @@
       <ProductName>.NET Framework 3.5 SP1</ProductName>
       <Install>false</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Model\Utils\CheckpointHelper.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

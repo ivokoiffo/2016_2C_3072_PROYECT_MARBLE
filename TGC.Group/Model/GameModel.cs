@@ -13,6 +13,8 @@ using System;
 using TGC.Core.BoundingVolumes;
 using System.Collections.Generic;
 using TGC.Core.SkeletalAnimation;
+using TGC.Group.Model.Utils;
+using System.Windows.Forms;
 
 namespace TGC.Group.Model
 {
@@ -22,6 +24,8 @@ namespace TGC.Group.Model
         private TgcSkeletalBoneAttach linterna;
         private TgcSkeletalMesh personaje;
         private TgcBoundingElipsoid boundPersonaje;
+        private TgcBoundingElipsoid boundMonstruo;
+        private TgcSkeletalMesh monstruo;
         private TgcMesh unMesh;
         private bool flagGod = false;
 		private Matrix cameraRotation;
@@ -30,9 +34,13 @@ namespace TGC.Group.Model
 		public float RotationSpeed { get; set; }
 		private Vector3 viewVector;
 
+        private Checkpoint ClosestCheckPoint;
+        List<TgcArrow> ArrowsClosesCheckPoint;
 
 
-		double rot = -21304;
+
+
+        double rot = -21304;
         private bool jumping;
         double variacion;
         private float jumpingElapsedTime;
@@ -72,11 +80,56 @@ namespace TGC.Group.Model
             //IMPORTANTE PREGUNTAR PORQUE DEBERIA ESTAR DESHABILITADO AUTOTRANSFORM
             personaje.AutoTransformEnable = true;
             //Escalarlo porque es muy grande
-            personaje.Position = new Vector3(0,-17, 0);
+            personaje.Position = new Vector3(325,103.5f, 475);
             //Escalamos el personaje ya que sino la escalera es demasiado grande.
             personaje.Scale = new Vector3(1.0f, 1.0f, 1.0f);
             boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter() + new Vector3(0, 0, 0), new Vector3(12, 28, 12));
             jumping = false;
+        }
+        private void seteoDelMonstruo()
+        {
+            //Paths para archivo XML de la malla
+            var pathMesh = MediaDir + "SkeletalAnimations\\Robot\\Robot-TgcSkeletalMesh.xml";
+
+            //Path para carpeta de texturas de la malla
+            var mediaPath = MediaDir + "SkeletalAnimations\\Robot\\";
+
+            //Lista de animaciones disponibles
+            string[] animationList =
+            {
+                "Parado",
+                "Caminando",
+                "Correr",
+                "PasoDerecho",
+                "PasoIzquierdo",
+                "Empujar",
+                "Patear",
+                "Pegar",
+                "Arrojar"
+            };
+
+            //Crear rutas con cada animacion
+            var animationsPath = new string[animationList.Length];
+            for (var i = 0; i < animationList.Length; i++)
+            {
+                animationsPath[i] = mediaPath + animationList[i] + "-TgcSkeletalAnim.xml";
+            }
+
+            //Cargar mesh y animaciones
+            var loader = new TgcSkeletalLoader();
+            monstruo = loader.loadMeshAndAnimationsFromFile(pathMesh, mediaPath, animationsPath);
+
+            monstruo.AutoTransformEnable = true;
+            //Escalarlo porque es muy grande
+            monstruo.Position = new Vector3(325,101, 475);
+            //Escalamos el personaje ya que sino la escalera es demasiado grande.
+            monstruo.Scale = new Vector3(0.65f, 0.65f, 0.65f);
+
+            monstruo.playAnimation(animationList[0], true);
+
+            //boundMonstruo = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter() + new Vector3(0, 0, 0), new Vector3(12, 28, 12));
+        
+            
         }
         private void setLinterna() {
             //Crear caja como modelo de Attachment del hueos "Bip01 L Hand"
@@ -91,14 +144,23 @@ namespace TGC.Group.Model
         }
         public override void Init()
         {
+            //Para la creacion de checkpoints, borrar en el futuro
+            System.Globalization.CultureInfo customCulture = (System.Globalization.CultureInfo)System.Threading.Thread.CurrentThread.CurrentCulture.Clone();
+            customCulture.NumberFormat.NumberDecimalSeparator = ".";
+
+            System.Threading.Thread.CurrentThread.CurrentCulture = customCulture;
+
+            Clipboard.Clear();
             //Device de DirectX para crear primitivas.
             var d3dDevice = D3DDevice.Instance.Device;
 			d3dDevice.ShowCursor(true);
             //Seteo el personaje
             seteoDePersonaje();
+            //Seteo del monsturo
+            seteoDelMonstruo();
            // setLinterna();
             //Seteo el escenario
-            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapa-TgcScene.xml");
+            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\MPmapa+El1-TgcScene.xml");
 			leftrightRot = FastMath.PI_HALF;
 			updownRot = -FastMath.PI / 10.0f;
 			cameraRotation = Matrix.RotationX(updownRot) * Matrix.RotationY(leftrightRot);
@@ -107,10 +169,15 @@ namespace TGC.Group.Model
 			//initPuertaGiratoria();   
 			//Almacenar volumenes de colision del escenario
 			objetosColisionables.Clear();
+            CollitionManager.obstaculos = new List<BoundingBoxCollider>();
             foreach (var mesh in escenario.Meshes)
             {
                 objetosColisionables.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
+                CollitionManager.obstaculos.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
             }
+
+            CheckpointHelper.BuildCheckpoints();
+           
 
             //Crear manejador de colisiones
             collisionManager = new ElipsoidCollisionManager();
@@ -251,6 +318,8 @@ namespace TGC.Group.Model
 				var realMovement = collisionManager.moveCharacter(boundPersonaje, movementVector, objetosColisionables);
 				personaje.move(realMovement);
 			}
+            
+            
             /*
             //Si estaba saltando y hubo colision de una superficie que mira hacia abajo, desactivar salto
             if (jumping && collisionManager.Result.collisionNormal.Y < 0)
@@ -281,6 +350,8 @@ namespace TGC.Group.Model
             moverPersonaje();
             //animacionDePuerta();
 
+            logicaDelMonstruo();
+
             if (Input.keyPressed(Key.G)){
                 if (!flagGod)
                 {
@@ -293,6 +364,12 @@ namespace TGC.Group.Model
                     flagGod = false;
                 }
 		
+            }
+
+            if (Input.keyPressed(Key.C))
+            {
+                Clipboard.SetText(Clipboard.GetText() + String.Format(" checkpoints.Add(new Checkpoint(new Vector3({0}f, {1}f, {2}f) + origenMapa)); \n", Camara.Position.X - CheckpointHelper.origenMapa.X, 150 - CheckpointHelper.origenMapa.Y, Camara.Position.Z - CheckpointHelper.origenMapa.Z));
+                CheckpointHelper.checkpoints.Add(new Checkpoint(new Vector3(Camara.Position.X, 150, Camara.Position.Z)));
             }
             //Camara.UpdateCamera(ElapsedTime);
         }
@@ -308,18 +385,27 @@ namespace TGC.Group.Model
             PreRender();
             DrawText.drawText("[G]-Habilita GodMod ",0,20, Color.OrangeRed);
             DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(Camara.Position), 0, 30,Color.OrangeRed);
-      
+            Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
+           
+            DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
+            ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
+            ArrowsClosesCheckPoint.ForEach(a => a.render());
             //renderPuerta();
-            personaje.animateAndRender(ElapsedTime);
-
-			for (int i = 0; i <= 10; i++) {
-				escenario.Meshes[i].render();
-			}
-			/*foreach (var mesh in escenario.Meshes)
+            //personaje.animateAndRender(ElapsedTime);
+            personaje.BoundingBox.render();
+            monstruo.animateAndRender(ElapsedTime);
+			//for (int i = 0; i <= 10; i++) {
+			//	escenario.Meshes[i].render();
+			//}
+			foreach (var mesh in escenario.Meshes)
             {
                 //Renderizar modelo
                 mesh.render();
+                mesh.BoundingBox.render();
             }
+
+            //Deshabilitar para que no dibuje los checkpoints en el mapa
+            CheckpointHelper.renderAll();
             /*linterna.Mesh.Enabled = true;
             personaje.Attachments.Add(linterna);
             */
@@ -332,6 +418,11 @@ namespace TGC.Group.Model
             escenario.disposeAll();
             personaje.Attachments.Clear();
             personaje.dispose();
+        }
+
+        public void logicaDelMonstruo()
+        {
+
         }
     }
 }
