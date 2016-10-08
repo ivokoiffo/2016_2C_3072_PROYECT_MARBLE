@@ -93,6 +93,7 @@ namespace TGC.Group.Model
         {
             //Device de DirectX para crear primitivas.
             var d3dDevice = D3DDevice.Instance.Device;
+			d3dDevice.ShowCursor(true);
             //Seteo el personaje
             seteoDePersonaje();
            // setLinterna();
@@ -102,6 +103,7 @@ namespace TGC.Group.Model
 			updownRot = -FastMath.PI / 10.0f;
 			cameraRotation = Matrix.RotationX(updownRot) * Matrix.RotationY(leftrightRot);
 			RotationSpeed = 0.1f;
+			viewVector = new Vector3(-150,0,100);
 			//initPuertaGiratoria();   
 			//Almacenar volumenes de colision del escenario
 			objetosColisionables.Clear();
@@ -113,6 +115,7 @@ namespace TGC.Group.Model
             //Crear manejador de colisiones
             collisionManager = new ElipsoidCollisionManager();
             collisionManager.GravityEnabled = true;
+
 
         }
  
@@ -155,7 +158,7 @@ namespace TGC.Group.Model
             unMesh.move(new Vector3(System.Convert.ToSingle((larg - (Math.Cos(ang) * larg))), 0, System.Convert.ToSingle(Math.Sin(ang) * larg)));
         }
         private void setCamaraPrimeraPersona(Vector3 lookAt) {
-            Vector3 posicionConOffset = Vector3.Add(new Vector3(8,20,0),(boundPersonaje.Center));
+            Vector3 posicionConOffset = Vector3.Add(new Vector3(5,20,2),(boundPersonaje.Center));
             Camara.SetCamera(posicionConOffset,lookAt);
         }
         private void moverPersonaje() {
@@ -188,27 +191,9 @@ namespace TGC.Group.Model
 
 			}
 
-            //Derecha
-            if (Input.keyDown(Key.D))
-            {
-                rotate = velocidadRotacion;
-                rotating = true;
-		    }
+         
 
-            //Izquierda
-            if (Input.keyDown(Key.A))
-            {
-                rotate = -velocidadRotacion;
-                rotating = true;
-            }
-
-
-            //Si hubo rotacion
-            if (rotating)
-            {
-                var rotAngle = Geometry.DegreeToRadian(rotate * ElapsedTime);
-                personaje.rotateY(rotAngle);
-            }
+          
 
             else if (moving)
             {
@@ -226,37 +211,46 @@ namespace TGC.Group.Model
             var movementVector = Vector3.Empty;
 			var leftrightRotPrevius= leftrightRot-Input.XposRelative * RotationSpeed;
 			var updownRotPrevius = updownRot + Input.YposRelative * RotationSpeed;
+		 leftrightRot -= Input.XposRelative * RotationSpeed; 
+			personaje.rotateY(Input.XposRelative* RotationSpeed);
 
+			var movem=new Vector3(0,0,0);
 			if (moving)
             {
                 //Aplicar movimiento, desplazarse en base a la rotacion actual del personaje
-                movementVector = new Vector3(
-                    FastMath.Sin(personaje.Rotation.Y) * moveForward,
+                movem = new Vector3(
+					FastMath.Sin(moveForward)*velocidadCaminar,
                     jump,
-                    FastMath.Cos(personaje.Rotation.Y) * moveForward
+					FastMath.Cos(moveForward)*velocidadCaminar
                     );
 				//Se actualiza matrix de rotacion, para no hacer este calculo cada vez y solo cuando en verdad es necesario.
-				if(!marchaAtras) viewVector = movementVector; //Solo cambia el vector de view si no esta caminando para atras
+				//if(!marchaAtras) viewVector = movementVector; //Solo cambia el vector de view si no esta caminando para atras
 			}
 			//maximos para los giros del vectorDeView
-			if (-1f < leftrightRotPrevius && leftrightRotPrevius <1f ) {leftrightRot-=Input.XposRelative*RotationSpeed;};
-			if (-1f < updownRotPrevius && updownRotPrevius < 1f) { updownRot += Input.YposRelative * RotationSpeed;  };
-			cameraRotation = Matrix.RotationY(-leftrightRot) * Matrix.RotationX(-updownRot); //calcula la rotacion del vector de view
-			var cameraFinalTarget = Vector3.TransformNormal(viewVector, cameraRotation) * 1000; //direccion en que se mueve girada respecto la rotacion de la camara
-			Vector3 lookAt = Vector3.Add(boundPersonaje.Center, cameraFinalTarget); //vector lookAt final
-			setCamaraPrimeraPersona(lookAt);//se lo paso al setCamara
+			if (-1f < updownRotPrevius && updownRotPrevius < 1f) { updownRot += Input.YposRelative * RotationSpeed; }
 
-			  //Actualizar valores de gravedad
-            collisionManager.GravityEnabled = true;
-            collisionManager.GravityForce = new Vector3(0f, 2f, 0f);
+				cameraRotation = Matrix.RotationY(-leftrightRot) * Matrix.RotationX(-updownRot); //calcula la rotacion del vector de view
 
-        
+				movementVector = Vector3.TransformNormal(movem, Matrix.RotationY(-leftrightRot));
+				var cameraFinalTarget = Vector3.TransformNormal(viewVector, cameraRotation); //direccion en que se mueve girada respecto la rotacion de la camara
+				Vector3 lookAt = Vector3.Add(boundPersonaje.Center, cameraFinalTarget); //vector lookAt final
+			if (!flagGod)
+			{
 
-            //Mover personaje con detección de colisiones, sliding y gravedad
-                //Aca se aplica toda la lógica de detección de colisiones del CollisionManager. Intenta mover el Elipsoide
-                //del personaje a la posición deseada. Retorna la verdadera posicion (realMovement) a la que se pudo mover
-                var realMovement = collisionManager.moveCharacter(boundPersonaje, movementVector,objetosColisionables);
-                personaje.move(realMovement);
+				setCamaraPrimeraPersona(lookAt);//se lo paso al setCamara
+
+				//Actualizar valores de gravedad
+				collisionManager.GravityEnabled = true;
+				collisionManager.GravityForce = new Vector3(0f, 2f, 0f);
+
+
+
+				//Mover personaje con detección de colisiones, sliding y gravedad
+				//Aca se aplica toda la lógica de detección de colisiones del CollisionManager. Intenta mover el Elipsoide
+				//del personaje a la posición deseada. Retorna la verdadera posicion (realMovement) a la que se pudo mover
+				var realMovement = collisionManager.moveCharacter(boundPersonaje, movementVector, objetosColisionables);
+				personaje.move(realMovement);
+			}
             /*
             //Si estaba saltando y hubo colision de una superficie que mira hacia abajo, desactivar salto
             if (jumping && collisionManager.Result.collisionNormal.Y < 0)
@@ -283,6 +277,7 @@ namespace TGC.Group.Model
         public override void Update()
         {
             PreUpdate();
+
             moverPersonaje();
             //animacionDePuerta();
 
@@ -290,14 +285,16 @@ namespace TGC.Group.Model
                 if (!flagGod)
                 {
                     godMod();
-                    flagGod = true;
+				
+					flagGod = true;
                 }
                 else {
-                     Camara.UpdateCamera(ElapsedTime);
+                   //  Camara.UpdateCamera(ElapsedTime);
                     flagGod = false;
                 }
+		
             }
-            Camara.UpdateCamera(ElapsedTime);
+            //Camara.UpdateCamera(ElapsedTime);
         }
 
         private void renderPuerta() {
@@ -315,7 +312,10 @@ namespace TGC.Group.Model
             //renderPuerta();
             personaje.animateAndRender(ElapsedTime);
 
-			foreach (var mesh in escenario.Meshes)
+			for (int i = 0; i <= 10; i++) {
+				escenario.Meshes[i].render();
+			}
+			/*foreach (var mesh in escenario.Meshes)
             {
                 //Renderizar modelo
                 mesh.render();
@@ -323,8 +323,8 @@ namespace TGC.Group.Model
             /*linterna.Mesh.Enabled = true;
             personaje.Attachments.Add(linterna);
             */
-            //Finaliza el render y presenta en pantalla, al igual que el preRender se debe para casos puntuales es mejor utilizar a mano las operaciones de EndScene y PresentScene
-            PostRender();
+			//Finaliza el render y presenta en pantalla, al igual que el preRender se debe para casos puntuales es mejor utilizar a mano las operaciones de EndScene y PresentScene
+			PostRender();
         }
 
         public override void Dispose()

@@ -68,7 +68,6 @@ namespace TGC.Group.Model
 			//Calculamos el target de la camara, segun su direccion inicial y las rotaciones en screen space x,y.
 			var cameraRotatedTarget = Vector3.TransformNormal(directionView, cameraRotation);
 			var cameraFinalTarget = positionEye + cameraRotatedTarget;
-
 			var cameraOriginalUpVector = DEFAULT_UP_VECTOR;
 			var cameraRotatedUpVector = Vector3.TransformNormal(cameraOriginalUpVector, cameraRotation);
 
