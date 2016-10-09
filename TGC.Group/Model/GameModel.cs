@@ -196,7 +196,7 @@ namespace TGC.Group.Model
             //Seteo del monsturo
             seteoDelMonstruo();
             //Seteo el escenario
-            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\MPmapa+El1-TgcScene.xml");
+            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\MPmapa+El1ConArmario-TgcScene.xml");
 			leftrightRot = FastMath.PI_HALF;
 			updownRot = -FastMath.PI / 10.0f;
 			cameraRotation = Matrix.RotationX(updownRot) * Matrix.RotationY(leftrightRot);
@@ -205,11 +205,11 @@ namespace TGC.Group.Model
 			//initPuertaGiratoria();   
 			//Almacenar volumenes de colision del escenario
 			objetosColisionables.Clear();
-            CollitionManager.obstaculos = new List<BoundingBoxCollider>();
+            CollisionManager.obstaculos = new List<BoundingBoxCollider>();
             foreach (var mesh in escenario.Meshes)
             {
                 objetosColisionables.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
-                CollitionManager.obstaculos.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
+                CollisionManager.obstaculos.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
             }
 
             CheckpointHelper.BuildCheckpoints();
