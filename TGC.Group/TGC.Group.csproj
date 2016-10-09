@@ -93,7 +93,7 @@
     <Compile Include="Model\Collider.cs" />
     <Compile Include="Model\ElipsoidCollisionManager.cs" />
     <Compile Include="Model\GameModel.cs" />
-    <Compile Include="Model\Utils\CollisionManager.cs" />
+    <Compile Include="Model\Utils\CollitionManager.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Form\GameForm.resx">

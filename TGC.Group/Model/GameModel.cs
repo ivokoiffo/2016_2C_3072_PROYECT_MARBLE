@@ -80,7 +80,7 @@ namespace TGC.Group.Model
             //IMPORTANTE PREGUNTAR PORQUE DEBERIA ESTAR DESHABILITADO AUTOTRANSFORM
             personaje.AutoTransformEnable = true;
             //Escalarlo porque es muy grande
-            personaje.Position = new Vector3(324, 103.5f, 336); 
+            personaje.Position = new Vector3(325,103.5f, 475);
             //Escalamos el personaje ya que sino la escalera es demasiado grande.
             personaje.Scale = new Vector3(1.0f, 1.0f, 1.0f);
             boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter() + new Vector3(0, 0, 0), new Vector3(12, 28, 12));
@@ -160,7 +160,7 @@ namespace TGC.Group.Model
             seteoDelMonstruo();
            // setLinterna();
             //Seteo el escenario
-            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\MPmapa+El1ConArmario-TgcScene.xml");
+            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\MPmapa+El1-TgcScene.xml");
 			leftrightRot = FastMath.PI_HALF;
 			updownRot = -FastMath.PI / 10.0f;
 			cameraRotation = Matrix.RotationX(updownRot) * Matrix.RotationY(leftrightRot);
@@ -169,11 +169,11 @@ namespace TGC.Group.Model
 			//initPuertaGiratoria();   
 			//Almacenar volumenes de colision del escenario
 			objetosColisionables.Clear();
-            CollisionManager.obstaculos = new List<BoundingBoxCollider>();
+            CollitionManager.obstaculos = new List<BoundingBoxCollider>();
             foreach (var mesh in escenario.Meshes)
             {
                 objetosColisionables.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
-                CollisionManager.obstaculos.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
+                CollitionManager.obstaculos.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
             }
 
             CheckpointHelper.BuildCheckpoints();
