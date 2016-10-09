@@ -56,8 +56,8 @@ namespace TGC.Group.Model
             rayCast.Direction = aCheckPoint.Position - this.Position;
             float distance = Vector3.Length(aCheckPoint.Position - this.Position);
             BoundingBoxCollider boundingBox = new BoundingBoxCollider();
-            CollitionManager.getClosestBoundingBox(rayCast, out boundingBox, null);
-            return boundingBox == null || (Vector3.Length(CollitionManager.getClosesPointBetween(rayCast, boundingBox) - rayCast.Origin) > distance);
+            CollisionManager.getClosestBoundingBox(rayCast, out boundingBox, null);
+            return boundingBox == null || (Vector3.Length(CollisionManager.getClosesPointBetween(rayCast, boundingBox) - rayCast.Origin) > distance);
 
         }
 

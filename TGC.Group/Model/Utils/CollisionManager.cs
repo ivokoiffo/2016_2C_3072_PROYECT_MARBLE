@@ -9,7 +9,7 @@ using TGC.Core.Geometry;
 
 namespace TGC.Group.Model.Utils
 {
-    class CollitionManager
+    class CollisionManager
     {
 
         public static List<BoundingBoxCollider> obstaculos { get; set; }
@@ -17,7 +17,7 @@ namespace TGC.Group.Model.Utils
         public static Boolean detectColision(BoundingBoxCollider boundingBox)
         {
             Boolean collide = false;
-            foreach (BoundingBoxCollider obstaculo in CollitionManager.obstaculos)
+            foreach (BoundingBoxCollider obstaculo in CollisionManager.obstaculos)
             {
 
                 
@@ -33,7 +33,7 @@ namespace TGC.Group.Model.Utils
         public static List<BoundingBoxCollider> getColisions(BoundingBoxCollider boundingBox)
         {
             List<BoundingBoxCollider> boundingBoxes = new List<BoundingBoxCollider>();
-            foreach (BoundingBoxCollider obstaculo in CollitionManager.obstaculos)
+            foreach (BoundingBoxCollider obstaculo in CollisionManager.obstaculos)
             {
 
                 TgcCollisionUtils.BoxBoxResult result = TgcCollisionUtils.classifyBoxBox(boundingBox.Aabb, obstaculo.Aabb);
@@ -48,7 +48,7 @@ namespace TGC.Group.Model.Utils
         public static List<BoundingBoxCollider> getColisions(TgcRay ray)
         {
             Vector3 vector = new Vector3();
-            return CollitionManager.obstaculos.FindAll(b => TgcCollisionUtils.intersectRayAABB(ray, b.Aabb, out vector));
+            return CollisionManager.obstaculos.FindAll(b => TgcCollisionUtils.intersectRayAABB(ray, b.Aabb, out vector));
         }
 
         public static Boolean isColliding(BoundingBoxCollider boundingBox, BoundingBoxCollider obstaculo)
