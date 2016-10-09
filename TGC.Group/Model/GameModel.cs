@@ -197,7 +197,8 @@ namespace TGC.Group.Model
             seteoDelMonstruo();
             //Seteo el escenario
             escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\MPmapa+El1ConArmario-TgcScene.xml");
-			leftrightRot = FastMath.PI_HALF;
+
+            leftrightRot = FastMath.PI_HALF;
 			updownRot = -FastMath.PI / 10.0f;
 			cameraRotation = Matrix.RotationX(updownRot) * Matrix.RotationY(leftrightRot);
 			RotationSpeed = 0.1f;
