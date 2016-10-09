@@ -15,13 +15,12 @@ using System.Collections.Generic;
 using TGC.Core.SkeletalAnimation;
 using TGC.Group.Model.Utils;
 using System.Windows.Forms;
-
+using TGC.Core.Collision;
 namespace TGC.Group.Model
 {
     public class GameModel : TgcExample
 	{
         private TgcScene escenario;
-        private TgcSkeletalBoneAttach linterna;
         private TgcSkeletalMesh personaje;
         private TgcBoundingElipsoid boundPersonaje;
         private TgcBoundingElipsoid boundMonstruo;
@@ -34,11 +33,6 @@ namespace TGC.Group.Model
 		public float RotationSpeed { get; set; }
 		private Vector3 viewVector;
 
-        private Checkpoint ClosestCheckPoint;
-        List<TgcArrow> ArrowsClosesCheckPoint;
-
-
-
 
         double rot = -21304;
         private bool jumping;
@@ -48,6 +42,60 @@ namespace TGC.Group.Model
 
         private ElipsoidCollisionManager collisionManager;
         float larg = 4;
+
+        private Checkpoint ClosestCheckPoint;
+        List<TgcArrow> ArrowsClosesCheckPoint;
+		private TgcMesh setMeshToOrigin(TgcMesh mesh)
+ 		{
+ 			//Desplazar los vertices del mesh para que tengan el centro del AABB en el origen
+ 			var center = mesh.BoundingBox.calculateBoxCenter();
+ 			mesh=moveMeshVertices(-center, mesh);
+ 
+ 			//Ubicar el mesh en donde estaba originalmente
+ 			mesh.BoundingBox.setExtremes(mesh.BoundingBox.PMin - center, mesh.BoundingBox.PMax - center);
+ 			mesh.Position = center;
+ 			return mesh;
+ 		}
+ 
+ 		private TgcMesh moveMeshVertices(Vector3 offset, TgcMesh mesh)
+ 		{	
+ 			switch (mesh.RenderType)
+ 			{
+ 			case TgcMesh.MeshRenderType.VERTEX_COLOR:
+ 				var verts1 = (TgcSceneLoader.VertexColorVertex[])mesh.D3dMesh.LockVertexBuffer(typeof(TgcSceneLoader.VertexColorVertex), LockFlags.ReadOnly, mesh.D3dMesh.NumberVertices);
+ 				for (var i = 0; i<verts1.Length; i++)
+ 				{
+ 					verts1[i].Position = verts1[i].Position + offset;
+ 				}
+ 				mesh.D3dMesh.SetVertexBufferData(verts1, LockFlags.None);
+ 				mesh.D3dMesh.UnlockVertexBuffer();
+ 					return mesh;
+ 			
+ 
+ 			case TgcMesh.MeshRenderType.DIFFUSE_MAP:
+ 				var verts2 = (TgcSceneLoader.DiffuseMapVertex[])mesh.D3dMesh.LockVertexBuffer(typeof(TgcSceneLoader.DiffuseMapVertex), LockFlags.ReadOnly, mesh.D3dMesh.NumberVertices);
+ 				for (var i = 0; i<verts2.Length; i++)
+ 				{
+ 					verts2[i].Position = verts2[i].Position + offset;
+ 				}
+ 				mesh.D3dMesh.SetVertexBufferData(verts2, LockFlags.None);
+ 				mesh.D3dMesh.UnlockVertexBuffer();
+ 				return mesh;
+ 
+ 			case TgcMesh.MeshRenderType.DIFFUSE_MAP_AND_LIGHTMAP:
+ 				var verts3 = (TgcSceneLoader.DiffuseMapAndLightmapVertex[])mesh.D3dMesh.LockVertexBuffer(typeof(TgcSceneLoader.DiffuseMapAndLightmapVertex), LockFlags.ReadOnly, mesh.D3dMesh.NumberVertices);
+ 				for (var i = 0; i<verts3.Length; i++)
+ 				{
+ 					verts3[i].Position = verts3[i].Position + offset;
+ 				}
+ 				mesh.D3dMesh.SetVertexBufferData(verts3, LockFlags.None);
+ 				mesh.D3dMesh.UnlockVertexBuffer();
+ 				return mesh;
+ 			}
+ 			return mesh;
+ 		}
+
+
        
 		public GameModel(string mediaDir, string shadersDir) : base(mediaDir, shadersDir)
         {
@@ -80,7 +128,7 @@ namespace TGC.Group.Model
             //IMPORTANTE PREGUNTAR PORQUE DEBERIA ESTAR DESHABILITADO AUTOTRANSFORM
             personaje.AutoTransformEnable = true;
             //Escalarlo porque es muy grande
-            personaje.Position = new Vector3(325,103.5f, 475);
+            personaje.Position = new Vector3(82f,140f, 886);
             //Escalamos el personaje ya que sino la escalera es demasiado grande.
             personaje.Scale = new Vector3(1.0f, 1.0f, 1.0f);
             boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter() + new Vector3(0, 0, 0), new Vector3(12, 28, 12));
@@ -131,17 +179,6 @@ namespace TGC.Group.Model
         
             
         }
-        private void setLinterna() {
-            //Crear caja como modelo de Attachment del hueos "Bip01 L Hand"
-            linterna = new TgcSkeletalBoneAttach();
-            //TgcTexture texturaLinterna = TgcTexture.createTexture(GuiController.Instance.ExamplesMediaDir + "MeshCreator\\Textures\\Vegetacion\\pasto.jpg");
-            //box = TgcBox.fromSize(posicionInicial, tamanioBox, pasto);
-            var attachmentBox = TgcBox.fromSize(new Vector3(2, 10, 5), Color.Blue);
-            linterna.Mesh = attachmentBox.toMesh("attachment");
-            linterna.Bone = personaje.getBoneByName("Bip01 L Hand");
-            linterna.Offset = Matrix.Translation(8, 0, -10);
-            linterna.updateValues(); 
-        }
         public override void Init()
         {
             //Para la creacion de checkpoints, borrar en el futuro
@@ -158,7 +195,6 @@ namespace TGC.Group.Model
             seteoDePersonaje();
             //Seteo del monsturo
             seteoDelMonstruo();
-           // setLinterna();
             //Seteo el escenario
             escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\MPmapa+El1-TgcScene.xml");
 			leftrightRot = FastMath.PI_HALF;
@@ -243,8 +279,7 @@ namespace TGC.Group.Model
             float jump = 0;
 			var marchaAtras = false;
             //Adelante
-            if (Input.keyDown(Key.W))
-            {
+            if (Input.keyDown(Key.W)){
                 moveForward = -velocidadCaminar;
                 moving = true;
             }
@@ -256,20 +291,10 @@ namespace TGC.Group.Model
                 moving = true;
         		marchaAtras = true;
 
-			}
-
-         
-
-          
-
-            else if (moving)
-            {
+			}else if (moving){
                 //Activar animacion de caminando
                 personaje.playAnimation("Walk", true);
-            }
-            //Si no se esta moviendo ni saltando, activar animacion de Parado
-            else
-            {
+            }else{
                 personaje.playAnimation("StandBy", true);
             }
 
@@ -278,23 +303,19 @@ namespace TGC.Group.Model
             var movementVector = Vector3.Empty;
 			var leftrightRotPrevius= leftrightRot-Input.XposRelative * RotationSpeed;
 			var updownRotPrevius = updownRot + Input.YposRelative * RotationSpeed;
-		 leftrightRot -= Input.XposRelative * RotationSpeed; 
+		    leftrightRot -= Input.XposRelative * RotationSpeed; 
 			personaje.rotateY(Input.XposRelative* RotationSpeed);
 
 			var movem=new Vector3(0,0,0);
 			if (moving)
             {
                 //Aplicar movimiento, desplazarse en base a la rotacion actual del personaje
-                movem = new Vector3(
-					FastMath.Sin(moveForward)*velocidadCaminar,
-                    jump,
-					FastMath.Cos(moveForward)*velocidadCaminar
-                    );
+                movem = new Vector3(FastMath.Sin(moveForward)*velocidadCaminar,0,FastMath.Cos(moveForward)*velocidadCaminar);
 				//Se actualiza matrix de rotacion, para no hacer este calculo cada vez y solo cuando en verdad es necesario.
 				//if(!marchaAtras) viewVector = movementVector; //Solo cambia el vector de view si no esta caminando para atras
 			}
 			//maximos para los giros del vectorDeView
-			if (-1f < updownRotPrevius && updownRotPrevius < 1f) { updownRot += Input.YposRelative * RotationSpeed; }
+			//if (-1f < updownRotPrevius && updownRotPrevius < 1f) { updownRot += Input.YposRelative * RotationSpeed; }
 
 				cameraRotation = Matrix.RotationY(-leftrightRot) * Matrix.RotationX(-updownRot); //calcula la rotacion del vector de view
 
@@ -305,7 +326,6 @@ namespace TGC.Group.Model
 			{
 
 				setCamaraPrimeraPersona(lookAt);//se lo paso al setCamara
-
 				//Actualizar valores de gravedad
 				collisionManager.GravityEnabled = true;
 				collisionManager.GravityForce = new Vector3(0f, 2f, 0f);
@@ -385,30 +405,39 @@ namespace TGC.Group.Model
             PreRender();
             DrawText.drawText("[G]-Habilita GodMod ",0,20, Color.OrangeRed);
             DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(Camara.Position), 0, 30,Color.OrangeRed);
-            Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
+            //Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
            
-            DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
-            ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
-            ArrowsClosesCheckPoint.ForEach(a => a.render());
+            //DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
+            //ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
+            //ArrowsClosesCheckPoint.ForEach(a => a.render());
             //renderPuerta();
             //personaje.animateAndRender(ElapsedTime);
             personaje.BoundingBox.render();
             monstruo.animateAndRender(ElapsedTime);
-			//for (int i = 0; i <= 10; i++) {
+			//for (int i = 0; i <= 24; i++) {
 			//	escenario.Meshes[i].render();
 			//}
-			foreach (var mesh in escenario.Meshes)
+			/*foreach (var mesh in escenario.Meshes)
             {
                 //Renderizar modelo
                 mesh.render();
                 mesh.BoundingBox.render();
-            }
-
+            }*/
+			  foreach (var mesh in escenario.Meshes)
+			{
+				//Nos ocupamos solo de las mallas habilitadas
+				if (mesh.Enabled)
+				{
+					//Solo mostrar la malla si colisiona contra el Frustum
+					var r = TgcCollisionUtils.classifyFrustumAABB(Frustum, mesh.BoundingBox);
+					if (r != TgcCollisionUtils.FrustumResult.OUTSIDE)
+					{
+						mesh.render();
+					}
+				}
+			}
             //Deshabilitar para que no dibuje los checkpoints en el mapa
             CheckpointHelper.renderAll();
-            /*linterna.Mesh.Enabled = true;
-            personaje.Attachments.Add(linterna);
-            */
 			//Finaliza el render y presenta en pantalla, al igual que el preRender se debe para casos puntuales es mejor utilizar a mano las operaciones de EndScene y PresentScene
 			PostRender();
         }
