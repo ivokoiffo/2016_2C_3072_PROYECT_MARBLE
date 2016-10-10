@@ -32,14 +32,15 @@ namespace TGC.Group.Model
 		private float updownRot;
 		public float RotationSpeed { get; set; }
 		private Vector3 viewVector;
+		Vector3 lookAt;
 
-
-        double rot = -21304;
+        double rot = 0;
         private bool jumping;
         double variacion;
         private float jumpingElapsedTime;
         private readonly List<Collider> objetosColisionables = new List<Collider>();
-
+		private readonly List<Collider> armarios = new List<Collider>();
+		private readonly List<TgcMesh> puertas = new List<TgcMesh>();
         private ElipsoidCollisionManager collisionManager;
         float larg = 4;
 
@@ -128,7 +129,7 @@ namespace TGC.Group.Model
             //IMPORTANTE PREGUNTAR PORQUE DEBERIA ESTAR DESHABILITADO AUTOTRANSFORM
             personaje.AutoTransformEnable = true;
             //Escalarlo porque es muy grande
-            personaje.Position = new Vector3(82f,140f, 886);
+            personaje.Position = new Vector3(82f,110f, 886);
             //Escalamos el personaje ya que sino la escalera es demasiado grande.
             personaje.Scale = new Vector3(1.0f, 1.0f, 1.0f);
             boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter() + new Vector3(0, 0, 0), new Vector3(12, 28, 12));
@@ -209,6 +210,15 @@ namespace TGC.Group.Model
             CollisionManager.obstaculos = new List<BoundingBoxCollider>();
             foreach (var mesh in escenario.Meshes)
             {
+				if (mesh.Name.Contains("Puerta"))
+				{
+					mesh.AutoTransformEnable = true;
+					puertas.Add(mesh);
+				
+				}
+				if (mesh.Name.Contains("Placard")|| mesh.Name.Contains("Locker")) {
+					armarios.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
+				}
                 objetosColisionables.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
                 CollisionManager.obstaculos.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
             }
@@ -227,47 +237,58 @@ namespace TGC.Group.Model
             Camara = new CamaraGod(personaje.Position,Input);
         }
 
-        private void animacionDePuerta() {
-            //Capturar Input Mouse
+        private void animacionDePuerta(TgcMesh unMesh) {
+       
             if (Input.keyPressed(Key.U))
             {
-                //Como ejemplo podemos hacer un movimiento simple de la cámara.
-                //En este caso le sumamos un valor en Y
-                ///Camara.SetCamera(Camara.Position + new Vector3(0, 10f, 0), Camara.LookAt);
-                //Ver ejemplos de cámara para otras operaciones posibles.
-                unMesh.Position = new Vector3(0, 0, 0);
-                unMesh.Rotation = new Vector3(0, System.Convert.ToSingle(rot), 0);
-                unMesh.move(new Vector3(System.Convert.ToSingle((larg - (Math.Cos(rot + 3.14) * larg))), 0, System.Convert.ToSingle(Math.Sin(rot + 3.14) * larg)));
+				
+				if (rot >= 1.57)
+				{
+					rot = 1.57;
+					variacion = -0.9 * ElapsedTime;
+				};
+				if (rot <= 0)
+				{
+					rot = 0;
+					variacion = 0.9 * ElapsedTime;
+				};
+				rot += variacion;
+				var ang = System.Convert.ToSingle(rot);
 
-                //Si superamos cierto Y volvemos a la posición original.
-                //if (Camara.Position.Y > 300f)
-                // {
-                //     Camara.SetCamera(new Vector3(Camara.Position.X, 0f, Camara.Position.Z), Camara.LookAt);
-                //  }
-            }
-            if (rot >= 1.57)
-            {
-                rot = 1.57;
-                variacion = -0.9 * ElapsedTime;
-            };
-            if (rot <= 0)
-            {
-                rot = 0;
-                variacion = 0.9 * ElapsedTime;
-            };
-            rot += variacion;
-            var ang = System.Convert.ToSingle(rot);
-            unMesh.Position = new Vector3(0, 0, 0);
-            unMesh.Rotation = new Vector3(0, ang, 0);
-            unMesh.move(new Vector3(System.Convert.ToSingle((larg - (Math.Cos(ang) * larg))), 0, System.Convert.ToSingle(Math.Sin(ang) * larg)));
-        }
+				unMesh.rotateY(ang);
+               unMesh.move(new Vector3(System.Convert.ToSingle((larg - (Math.Cos(rot + 3.14) * larg))), 0, System.Convert.ToSingle(Math.Sin(rot + 3.14) * larg)));
+			
+				//Si superamos cierto Y volvemos a la posición original.
+				//if (Camara.Position.Y > 300f)
+				// {
+				//     Camara.SetCamera(new Vector3(Camara.Position.X, 0f, Camara.Position.Z), Camara.LookAt);
+				//  }
+			}
+           
+           }
         private void setCamaraPrimeraPersona(Vector3 lookAt) {
             Vector3 posicionConOffset = Vector3.Add(new Vector3(5,20,2),(boundPersonaje.Center));
             Camara.SetCamera(posicionConOffset,lookAt);
         }
-        private void moverPersonaje() {
-            //seteo de velocidades
-            var velocidadCaminar = 1.0f;
+	
+			   //seteo de velocidades
+			private void controlDeArmario(Collider mesh)
+		{
+			if ((boundPersonaje.Center - mesh.BoundingSphere.Center).Length() < (boundPersonaje.Radius.Length() + mesh.BoundingSphere.Radius))
+			{
+				
+				Camara.SetCamera(Vector3.Add(mesh.BoundingSphere.Center,new Vector3(1,1,1)), lookAt*(-1));
+			}
+		}
+
+		public void rotarPuerta(TgcMesh puerta) {
+			Vector3 pos = puerta.Position;
+			puerta.Position = new Vector3(0, 0, 0);
+			puerta.Transform = Matrix.RotationZ(1);
+			puerta.Position = pos;
+		}
+		public void moverPersonaje(){    
+		var velocidadCaminar = 1.0f;
 			var velocidadRotacion =25;
             var velocidadSalto = 1.0f;
             var tiempoSalto = 1.0f;
@@ -284,6 +305,7 @@ namespace TGC.Group.Model
                 moveForward = -velocidadCaminar;
                 moving = true;
             }
+
 
             //Atras
             if (Input.keyDown(Key.S))
@@ -316,13 +338,13 @@ namespace TGC.Group.Model
 				//if(!marchaAtras) viewVector = movementVector; //Solo cambia el vector de view si no esta caminando para atras
 			}
 			//maximos para los giros del vectorDeView
-			//if (-1f < updownRotPrevius && updownRotPrevius < 1f) { updownRot += Input.YposRelative * RotationSpeed; }
+			if (-1f < updownRotPrevius && updownRotPrevius < 1f) { updownRot += Input.YposRelative * RotationSpeed; }
 
 				cameraRotation = Matrix.RotationY(-leftrightRot) * Matrix.RotationX(-updownRot); //calcula la rotacion del vector de view
 
 				movementVector = Vector3.TransformNormal(movem, Matrix.RotationY(-leftrightRot));
 				var cameraFinalTarget = Vector3.TransformNormal(viewVector, cameraRotation); //direccion en que se mueve girada respecto la rotacion de la camara
-				Vector3 lookAt = Vector3.Add(boundPersonaje.Center, cameraFinalTarget); //vector lookAt final
+				lookAt = Vector3.Add(boundPersonaje.Center, cameraFinalTarget); //vector lookAt final
 			if (!flagGod)
 			{
 
@@ -331,38 +353,29 @@ namespace TGC.Group.Model
 				collisionManager.GravityEnabled = true;
 				collisionManager.GravityForce = new Vector3(0f, 2f, 0f);
 
+				foreach (var puerta in puertas)
+				{
+					animacionDePuerta(puerta);
+				}
 
 
 				//Mover personaje con detección de colisiones, sliding y gravedad
 				//Aca se aplica toda la lógica de detección de colisiones del CollisionManager. Intenta mover el Elipsoide
 				//del personaje a la posición deseada. Retorna la verdadera posicion (realMovement) a la que se pudo mover
 				var realMovement = collisionManager.moveCharacter(boundPersonaje, movementVector, objetosColisionables);
-				personaje.move(realMovement);
+			
+				//personaje.move(realMovement);
+				if (Input.keyDown(Key.E))
+				{
+					foreach (var armario in armarios)
+					{
+						controlDeArmario(armario);}
+				}
+
 			}
             
             
-            /*
-            //Si estaba saltando y hubo colision de una superficie que mira hacia abajo, desactivar salto
-            if (jumping && collisionManager.Result.collisionNormal.Y < 0)
-            {
-                jumping = false;
-            }
-            */
-            /*
-            //Actualizar valores de normal de colision
-            if (collisionManager.Result.collisionFound)
-            {
-                collisionNormalArrow.PStart = collisionManager.Result.collisionPoint;
-                collisionNormalArrow.PEnd = collisionManager.Result.collisionPoint +
-                                            Vector3.Multiply(collisionManager.Result.collisionNormal, 80);
-
-                collisionNormalArrow.updateValues();
-
-
-                collisionPoint.Position = collisionManager.Result.collisionPoint;
-                collisionPoint.updateValues();
-
-            }*/
+   
         }
         public override void Update()
         {
@@ -406,15 +419,18 @@ namespace TGC.Group.Model
             PreRender();
             DrawText.drawText("[G]-Habilita GodMod ",0,20, Color.OrangeRed);
             DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(Camara.Position), 0, 30,Color.OrangeRed);
-            //Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
-           
-            //DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
-            //ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
-            //ArrowsClosesCheckPoint.ForEach(a => a.render());
-            //renderPuerta();
-            //personaje.animateAndRender(ElapsedTime);
-            personaje.BoundingBox.render();
-            monstruo.animateAndRender(ElapsedTime);
+			DrawText.drawText("armarios: " + armarios.Count.ToString(), 0, 50, Color.OrangeRed);
+			DrawText.drawText("puertas " + puertas.Count.ToString(), 0, 70, Color.OrangeRed);
+
+			//Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
+
+			//DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
+			//ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
+			//ArrowsClosesCheckPoint.ForEach(a => a.render());
+			//renderPuerta();
+			//personaje.animateAndRender(ElapsedTime);
+			// personaje.BoundingBox.render();
+			// monstruo.animateAndRender(ElapsedTime);
 			//for (int i = 0; i <= 24; i++) {
 			//	escenario.Meshes[i].render();
 			//}
@@ -424,7 +440,7 @@ namespace TGC.Group.Model
                 mesh.render();
                 mesh.BoundingBox.render();
             }*/
-			  foreach (var mesh in escenario.Meshes)
+			foreach (var mesh in escenario.Meshes)
 			{
 				//Nos ocupamos solo de las mallas habilitadas
 				if (mesh.Enabled)
@@ -438,7 +454,7 @@ namespace TGC.Group.Model
 				}
 			}
             //Deshabilitar para que no dibuje los checkpoints en el mapa
-            CheckpointHelper.renderAll();
+           // CheckpointHelper.renderAll();
 			//Finaliza el render y presenta en pantalla, al igual que el preRender se debe para casos puntuales es mejor utilizar a mano las operaciones de EndScene y PresentScene
 			PostRender();
         }
