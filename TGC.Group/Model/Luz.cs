@@ -14,10 +14,12 @@ namespace TGC.Group.Model
     abstract class  Luz
     {
         public float Duracion { get; set; }
+        public float Nombre { get;}
         abstract public void aplicarEfecto(TgcMesh mesh,Vector3 posicionCamara, Vector3 direccionLuz);
         public void deshabilitarEfecto(TgcMesh mesh) {
             mesh.Effect = TgcShaders.Instance.TgcMeshShader;
             mesh.Technique = TgcShaders.Instance.getTgcMeshTechnique(mesh.RenderType);
         }
+        abstract public string getNombreYDuracion();
     }
 }

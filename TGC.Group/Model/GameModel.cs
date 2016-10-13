@@ -27,7 +27,8 @@ namespace TGC.Group.Model
         private TgcSkeletalMesh monstruo;
         private TgcMesh unMesh;
         private TgcBox meshRecargaLuz;
-        private List<Luz> luces= new List<Luz>();
+        private List<TgcBox> objetosRecarga = new List<TgcBox>();
+        private Luz luz;
         private bool flagGod = false;
 		private Matrix cameraRotation;
 		private float leftrightRot;
@@ -204,9 +205,10 @@ namespace TGC.Group.Model
 			RotationSpeed = 0.1f;
             viewVector = new Vector3(1,0,0);
 
-            meshRecargaLuz = TgcBox.fromSize(new Vector3(30, 30, 30), Color.Red);
-            var posicionMeshRecarga = new Vector3(85f,179.76f, 895f);
-            meshRecargaLuz.move(posicionMeshRecarga);
+            meshRecargaLuz = TgcBox.fromSize(new Vector3(10, 10, 10), Color.Red);
+            meshRecargaLuz.AutoTransformEnable = true;
+            meshRecargaLuz.Position= new Vector3(85, 150, 1000);
+            objetosRecarga.Add(meshRecargaLuz);
             //initPuertaGiratoria();   
             //Almacenar volumenes de colision del escenario
             objetosColisionables.Clear();
@@ -233,9 +235,7 @@ namespace TGC.Group.Model
             collisionManager = new ElipsoidCollisionManager();
             collisionManager.GravityEnabled = true;
 
-            //BORRRAR
-            Linterna linterna = new Linterna(40);
-            luces.Add(linterna);
+            luz= new Linterna(40);
         }
  
         private void godMod() {
@@ -366,7 +366,7 @@ namespace TGC.Group.Model
 
             moverPersonaje();
             //animacionDePuerta();
-
+            
             logicaDelMonstruo();
 
             if (Input.keyPressed(Key.G)){
@@ -406,8 +406,8 @@ namespace TGC.Group.Model
             //Inicio el render de la escena, para ejemplos simples. Cuando tenemos postprocesado o shaders es mejor realizar las operaciones según nuestra conveniencia.
             PreRender();
             DrawText.drawText("[G]-Habilita GodMod ",0,20, Color.OrangeRed);
-            DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(Camara.Position), 0, 30,Color.OrangeRed);
-			DrawText.drawText("armarios: " + armarios.Count.ToString(), 0, 50, Color.OrangeRed);
+            DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(getOffset()), 0, 30,Color.OrangeRed);
+            DrawText.drawText("armarios: " + armarios.Count.ToString(), 0, 50, Color.OrangeRed);
 			DrawText.drawText("puertas " + puertas.Count.ToString(), 0, 70, Color.OrangeRed);
 
 			//Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
@@ -418,6 +418,7 @@ namespace TGC.Group.Model
 			//renderPuerta();
 			//personaje.animateAndRender(ElapsedTime);
 			personaje.BoundingBox.render();
+            meshRecargaLuz.render();
 			// monstruo.animateAndRender(ElapsedTime);
 			//for (int i = 0; i <= 24; i++) {
 			//	escenario.Meshes[i].render();
@@ -437,10 +438,8 @@ namespace TGC.Group.Model
 					var r = TgcCollisionUtils.classifyFrustumAABB(Frustum, mesh.BoundingBox);
 					if (r != TgcCollisionUtils.FrustumResult.OUTSIDE)
 					{
-                        foreach (var luz in luces)
-                        {
-                            luz.aplicarEfecto(mesh,getOffset(), direccionLookAt);
-                        }
+                        DrawText.drawText(luz.getNombreYDuracion(), 0, 90, Color.OrangeRed);
+                        luz.aplicarEfecto(mesh,getOffset(), direccionLookAt);
 						mesh.render();
 					}
 				}

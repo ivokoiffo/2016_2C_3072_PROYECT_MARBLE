@@ -40,5 +40,10 @@ namespace TGC.Group.Model
 
             //BAJAR DURACION Y VERIFICAR
         }
+
+        public override string getNombreYDuracion()
+        {
+            return "Duracion de Linterna es de:"+ Duracion;
+        }
     }
 }
