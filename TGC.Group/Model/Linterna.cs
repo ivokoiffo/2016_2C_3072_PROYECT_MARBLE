@@ -28,7 +28,7 @@ namespace TGC.Group.Model
             mesh.Effect.SetValue("spotLightDir", TgcParserUtils.vector3ToFloat3Array(direccionLuz));
             mesh.Effect.SetValue("lightIntensity", 75f);
             mesh.Effect.SetValue("lightAttenuation", 0.5750f);
-            mesh.Effect.SetValue("spotLightAngleCos", FastMath.ToRad(36f));
+            mesh.Effect.SetValue("spotLightAngleCos", FastMath.ToRad(45f));
             mesh.Effect.SetValue("spotLightExponent", 7f);
 
             //Cargar variables de shader de Material. El Material en realidad deberia ser propio de cada mesh. Pero en este ejemplo se simplifica con uno comun para todos

@@ -35,8 +35,6 @@ namespace TGC.Group.Model
 		private Vector3 viewVector;
 		Vector3 lookAt;
         private Vector3 direccionLookAt;
-        private Vector3 direccionDeLuz;
-        private Vector3 vectorAuxiliarParaLuz;
         double rot = 0;
         double variacion;
 
@@ -45,7 +43,7 @@ namespace TGC.Group.Model
 		private readonly List<TgcMesh> puertas = new List<TgcMesh>();
         private ElipsoidCollisionManager collisionManager;
         float larg = 4;
-
+        private Vector3 vectorOffset =  new Vector3(3,30,5);
         private Checkpoint ClosestCheckPoint;
         List<TgcArrow> ArrowsClosesCheckPoint;
 		private TgcMesh setMeshToOrigin(TgcMesh mesh)
@@ -203,7 +201,7 @@ namespace TGC.Group.Model
 			updownRot = -FastMath.PI / 10.0f;
 			cameraRotation = Matrix.RotationX(updownRot) * Matrix.RotationY(leftrightRot);
 			RotationSpeed = 0.1f;
-            viewVector = new Vector3(0,0,-1);
+            viewVector = new Vector3(1,0,0);
             //initPuertaGiratoria();   
             //Almacenar volumenes de colision del escenario
             objetosColisionables.Clear();
@@ -238,8 +236,9 @@ namespace TGC.Group.Model
         private void godMod() {
             Camara = new CamaraGod(personaje.Position,Input);
         }
-        private Vector3 getOffsetDeBounding() {
-            return Vector3.Add(new Vector3(5, 20, 2), (boundPersonaje.Center));
+        //OFFSET PARA PRIMERA PERSONA CON MANOS
+        private Vector3 getOffset() {
+            return personaje.Position + vectorOffset;
         }
         private void animacionDePuerta(TgcMesh unMesh) {
        
@@ -270,9 +269,7 @@ namespace TGC.Group.Model
 			}
            
            }
-        private void setCamaraPrimeraPersona(Vector3 lookAt) {
-            Camara.SetCamera(getOffsetDeBounding(),lookAt);
-        }
+
 	
 			   //seteo de velocidades
 		private void controlDeArmario(Collider mesh)
@@ -292,27 +289,26 @@ namespace TGC.Group.Model
 		}
 		public void moverPersonaje(){    
 		    var velocidadCaminar = 1.0f;
-            var movem = new Vector3(0, 0, 0);
+            var moveVector = new Vector3(0, 0, 0);
             //Calcular proxima posicion de personaje segun Input
             var moveForward = 0f;
             var moving = false;
             //Adelante
             if (Input.keyDown(Key.W)){
-                moveForward = velocidadCaminar;
                 moving = true;
+                moveVector += new Vector3(1, 0, 0) * velocidadCaminar;
             }
 
             //Atras
             if (Input.keyDown(Key.S))
             {
-                moveForward = -velocidadCaminar;
+                moveVector += new Vector3(-1, 0, 0) * velocidadCaminar;
                 moving = true;
 
 			}
             if (moving){
                 //Activar animacion de caminando
                 personaje.playAnimation("Walk", true);
-                movem = new Vector3(FastMath.Sin(moveForward) * velocidadCaminar, 0, FastMath.Cos(moveForward) * velocidadCaminar);
             }
             else{
                 personaje.playAnimation("StandBy", true);
@@ -331,17 +327,17 @@ namespace TGC.Group.Model
 
 				cameraRotation = Matrix.RotationY(-leftrightRot) * Matrix.RotationX(-updownRot); //calcula la rotacion del vector de view
 
-				movementVector = Vector3.TransformNormal(movem, Matrix.RotationY(-leftrightRot));
-                direccionDeLuz = Vector3.TransformNormal(vectorAuxiliarParaLuz, cameraRotation);
+				movementVector = Vector3.TransformNormal(moveVector, Matrix.RotationY(-leftrightRot));
                 direccionLookAt = Vector3.TransformNormal(viewVector, cameraRotation); //direccion en que se mueve girada respecto la rotacion de la camara
-				lookAt = Vector3.Add(boundPersonaje.Center, direccionLookAt); //vector lookAt final
 			if (!flagGod)
 			{
                 var realMovement = collisionManager.moveCharacter(boundPersonaje, movementVector, objetosColisionables);
                 personaje.move(realMovement);
-                setCamaraPrimeraPersona(lookAt);//se lo paso al setCamara
-				//Actualizar valores de gravedad
-				collisionManager.GravityEnabled = true;
+                lookAt = Vector3.Add(getOffset(), direccionLookAt); //vector lookAt final
+
+                Camara.SetCamera(getOffset(),lookAt);
+                //Actualizar valores de gravedad
+                collisionManager.GravityEnabled = true;
 				collisionManager.GravityForce = new Vector3(0f, 2f, 0f);
 
 				foreach (var puerta in puertas)
@@ -415,7 +411,7 @@ namespace TGC.Group.Model
 			//ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
 			//ArrowsClosesCheckPoint.ForEach(a => a.render());
 			//renderPuerta();
-			personaje.animateAndRender(ElapsedTime);
+			//personaje.animateAndRender(ElapsedTime);
 			personaje.BoundingBox.render();
 			// monstruo.animateAndRender(ElapsedTime);
 			//for (int i = 0; i <= 24; i++) {
@@ -435,11 +431,11 @@ namespace TGC.Group.Model
 					//Solo mostrar la malla si colisiona contra el Frustum
 					var r = TgcCollisionUtils.classifyFrustumAABB(Frustum, mesh.BoundingBox);
 					if (r != TgcCollisionUtils.FrustumResult.OUTSIDE)
-					{/*
+					{
                         foreach (var luz in luces)
                         {
-                            luz.aplicarEfecto(mesh,Camara.Position, direccionDeLuz);
-                        }*/
+                            luz.aplicarEfecto(mesh,getOffset(), direccionLookAt);
+                        }
 						mesh.render();
 					}
 				}
