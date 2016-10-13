@@ -26,6 +26,7 @@ namespace TGC.Group.Model
         private TgcBoundingElipsoid boundMonstruo;
         private TgcSkeletalMesh monstruo;
         private TgcMesh unMesh;
+        private List<Luz> luces= new List<Luz>();
         private bool flagGod = false;
 		private Matrix cameraRotation;
 		private float leftrightRot;
@@ -33,11 +34,12 @@ namespace TGC.Group.Model
 		public float RotationSpeed { get; set; }
 		private Vector3 viewVector;
 		Vector3 lookAt;
-
+        private Vector3 direccionLookAt;
+        private Vector3 direccionDeLuz;
+        private Vector3 vectorAuxiliarParaLuz;
         double rot = 0;
-        private bool jumping;
         double variacion;
-        private float jumpingElapsedTime;
+
         private readonly List<Collider> objetosColisionables = new List<Collider>();
 		private readonly List<Collider> armarios = new List<Collider>();
 		private readonly List<TgcMesh> puertas = new List<TgcMesh>();
@@ -128,12 +130,10 @@ namespace TGC.Group.Model
                     });
             //IMPORTANTE PREGUNTAR PORQUE DEBERIA ESTAR DESHABILITADO AUTOTRANSFORM
             personaje.AutoTransformEnable = true;
-            //Escalarlo porque es muy grande
-            personaje.Position = new Vector3(82f,110f, 886);
-            //Escalamos el personaje ya que sino la escalera es demasiado grande.
             personaje.Scale = new Vector3(1.0f, 1.0f, 1.0f);
-            boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter() + new Vector3(0, 0, 0), new Vector3(12, 28, 12));
-            jumping = false;
+            personaje.Position = new Vector3(82f,110f, 886);
+            personaje.rotateY(Geometry.DegreeToRadian(180f));
+            boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter(), personaje.BoundingBox.calculateAxisRadius());
         }
         private void seteoDelMonstruo()
         {
@@ -203,10 +203,10 @@ namespace TGC.Group.Model
 			updownRot = -FastMath.PI / 10.0f;
 			cameraRotation = Matrix.RotationX(updownRot) * Matrix.RotationY(leftrightRot);
 			RotationSpeed = 0.1f;
-			viewVector = new Vector3(-150,0,100);
-			//initPuertaGiratoria();   
-			//Almacenar volumenes de colision del escenario
-			objetosColisionables.Clear();
+            viewVector = new Vector3(0,0,-1);
+            //initPuertaGiratoria();   
+            //Almacenar volumenes de colision del escenario
+            objetosColisionables.Clear();
             CollisionManager.obstaculos = new List<BoundingBoxCollider>();
             foreach (var mesh in escenario.Meshes)
             {
@@ -230,13 +230,17 @@ namespace TGC.Group.Model
             collisionManager = new ElipsoidCollisionManager();
             collisionManager.GravityEnabled = true;
 
-
+            //BORRRAR
+            Linterna linterna = new Linterna(40);
+            luces.Add(linterna);
         }
  
         private void godMod() {
             Camara = new CamaraGod(personaje.Position,Input);
         }
-
+        private Vector3 getOffsetDeBounding() {
+            return Vector3.Add(new Vector3(5, 20, 2), (boundPersonaje.Center));
+        }
         private void animacionDePuerta(TgcMesh unMesh) {
        
             if (Input.keyPressed(Key.U))
@@ -267,12 +271,11 @@ namespace TGC.Group.Model
            
            }
         private void setCamaraPrimeraPersona(Vector3 lookAt) {
-            Vector3 posicionConOffset = Vector3.Add(new Vector3(5,20,2),(boundPersonaje.Center));
-            Camara.SetCamera(posicionConOffset,lookAt);
+            Camara.SetCamera(getOffsetDeBounding(),lookAt);
         }
 	
 			   //seteo de velocidades
-			private void controlDeArmario(Collider mesh)
+		private void controlDeArmario(Collider mesh)
 		{
 			if ((boundPersonaje.Center - mesh.BoundingSphere.Center).Length() < (boundPersonaje.Radius.Length() + mesh.BoundingSphere.Radius))
 			{
@@ -288,36 +291,30 @@ namespace TGC.Group.Model
 			puerta.Position = pos;
 		}
 		public void moverPersonaje(){    
-		var velocidadCaminar = 1.0f;
-			var velocidadRotacion =25;
-            var velocidadSalto = 1.0f;
-            var tiempoSalto = 1.0f;
-
+		    var velocidadCaminar = 1.0f;
+            var movem = new Vector3(0, 0, 0);
             //Calcular proxima posicion de personaje segun Input
             var moveForward = 0f;
-            float rotate = 0;
             var moving = false;
-            var rotating = false;
-            float jump = 0;
-			var marchaAtras = false;
             //Adelante
             if (Input.keyDown(Key.W)){
-                moveForward = -velocidadCaminar;
+                moveForward = velocidadCaminar;
                 moving = true;
             }
-
 
             //Atras
             if (Input.keyDown(Key.S))
             {
-                moveForward = velocidadCaminar;
+                moveForward = -velocidadCaminar;
                 moving = true;
-        		marchaAtras = true;
 
-			}else if (moving){
+			}
+            if (moving){
                 //Activar animacion de caminando
                 personaje.playAnimation("Walk", true);
-            }else{
+                movem = new Vector3(FastMath.Sin(moveForward) * velocidadCaminar, 0, FastMath.Cos(moveForward) * velocidadCaminar);
+            }
+            else{
                 personaje.playAnimation("StandBy", true);
             }
 
@@ -329,26 +326,20 @@ namespace TGC.Group.Model
 		    leftrightRot -= Input.XposRelative * RotationSpeed; 
 			personaje.rotateY(Input.XposRelative* RotationSpeed);
 
-			var movem=new Vector3(0,0,0);
-			if (moving)
-            {
-                //Aplicar movimiento, desplazarse en base a la rotacion actual del personaje
-                movem = new Vector3(FastMath.Sin(moveForward)*velocidadCaminar,0,FastMath.Cos(moveForward)*velocidadCaminar);
-				//Se actualiza matrix de rotacion, para no hacer este calculo cada vez y solo cuando en verdad es necesario.
-				//if(!marchaAtras) viewVector = movementVector; //Solo cambia el vector de view si no esta caminando para atras
-			}
-			//maximos para los giros del vectorDeView
-			if (-1f < updownRotPrevius && updownRotPrevius < 1f) { updownRot += Input.YposRelative * RotationSpeed; }
+            //maximos para los giros del vectorDeView
+            if (-1f < updownRotPrevius && updownRotPrevius < 1f) { updownRot += Input.YposRelative * RotationSpeed; }
 
 				cameraRotation = Matrix.RotationY(-leftrightRot) * Matrix.RotationX(-updownRot); //calcula la rotacion del vector de view
 
 				movementVector = Vector3.TransformNormal(movem, Matrix.RotationY(-leftrightRot));
-				var cameraFinalTarget = Vector3.TransformNormal(viewVector, cameraRotation); //direccion en que se mueve girada respecto la rotacion de la camara
-				lookAt = Vector3.Add(boundPersonaje.Center, cameraFinalTarget); //vector lookAt final
+                direccionDeLuz = Vector3.TransformNormal(vectorAuxiliarParaLuz, cameraRotation);
+                direccionLookAt = Vector3.TransformNormal(viewVector, cameraRotation); //direccion en que se mueve girada respecto la rotacion de la camara
+				lookAt = Vector3.Add(boundPersonaje.Center, direccionLookAt); //vector lookAt final
 			if (!flagGod)
 			{
-
-				setCamaraPrimeraPersona(lookAt);//se lo paso al setCamara
+                var realMovement = collisionManager.moveCharacter(boundPersonaje, movementVector, objetosColisionables);
+                personaje.move(realMovement);
+                setCamaraPrimeraPersona(lookAt);//se lo paso al setCamara
 				//Actualizar valores de gravedad
 				collisionManager.GravityEnabled = true;
 				collisionManager.GravityForce = new Vector3(0f, 2f, 0f);
@@ -358,13 +349,6 @@ namespace TGC.Group.Model
 					animacionDePuerta(puerta);
 				}
 
-
-				//Mover personaje con detección de colisiones, sliding y gravedad
-				//Aca se aplica toda la lógica de detección de colisiones del CollisionManager. Intenta mover el Elipsoide
-				//del personaje a la posición deseada. Retorna la verdadera posicion (realMovement) a la que se pudo mover
-				var realMovement = collisionManager.moveCharacter(boundPersonaje, movementVector, objetosColisionables);
-			
-				//personaje.move(realMovement);
 				if (Input.keyDown(Key.E))
 				{
 					foreach (var armario in armarios)
@@ -373,10 +357,8 @@ namespace TGC.Group.Model
 				}
 
 			}
-            
-            
-   
         }
+
         public override void Update()
         {
             PreUpdate();
@@ -394,7 +376,6 @@ namespace TGC.Group.Model
 					flagGod = true;
                 }
                 else {
-                   //  Camara.UpdateCamera(ElapsedTime);
                     flagGod = false;
                 }
 		
@@ -405,7 +386,13 @@ namespace TGC.Group.Model
                 Clipboard.SetText(Clipboard.GetText() + String.Format(" checkpoints.Add(new Checkpoint(new Vector3({0}f, {1}f, {2}f) + origenMapa)); \n", Camara.Position.X - CheckpointHelper.origenMapa.X, 150 - CheckpointHelper.origenMapa.Y, Camara.Position.Z - CheckpointHelper.origenMapa.Z));
                 CheckpointHelper.checkpoints.Add(new Checkpoint(new Vector3(Camara.Position.X, 150, Camara.Position.Z)));
             }
-            //Camara.UpdateCamera(ElapsedTime);
+
+            
+            //DES/Habilita la linterna
+            /*if (Input.keyPressed(Key.L))
+            {
+                Linterna linterna = new Linterna();
+            }*/
         }
 
         private void renderPuerta() {
@@ -428,8 +415,8 @@ namespace TGC.Group.Model
 			//ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
 			//ArrowsClosesCheckPoint.ForEach(a => a.render());
 			//renderPuerta();
-			//personaje.animateAndRender(ElapsedTime);
-			// personaje.BoundingBox.render();
+			personaje.animateAndRender(ElapsedTime);
+			personaje.BoundingBox.render();
 			// monstruo.animateAndRender(ElapsedTime);
 			//for (int i = 0; i <= 24; i++) {
 			//	escenario.Meshes[i].render();
@@ -448,7 +435,11 @@ namespace TGC.Group.Model
 					//Solo mostrar la malla si colisiona contra el Frustum
 					var r = TgcCollisionUtils.classifyFrustumAABB(Frustum, mesh.BoundingBox);
 					if (r != TgcCollisionUtils.FrustumResult.OUTSIDE)
-					{
+					{/*
+                        foreach (var luz in luces)
+                        {
+                            luz.aplicarEfecto(mesh,Camara.Position, direccionDeLuz);
+                        }*/
 						mesh.render();
 					}
 				}
