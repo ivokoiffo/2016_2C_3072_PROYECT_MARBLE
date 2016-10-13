@@ -15,7 +15,9 @@ namespace TGC.Group.Model
     {
         public float Duracion { get; set; }
         public float Nombre { get;}
+        public float VelocidadConsumo { get; set; } 
         abstract public void aplicarEfecto(TgcMesh mesh,Vector3 posicionCamara, Vector3 direccionLuz);
+        abstract public void consumir(float tiempo);
         public void deshabilitarEfecto(TgcMesh mesh) {
             mesh.Effect = TgcShaders.Instance.TgcMeshShader;
             mesh.Technique = TgcShaders.Instance.getTgcMeshTechnique(mesh.RenderType);

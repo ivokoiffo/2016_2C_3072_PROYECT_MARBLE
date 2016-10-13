@@ -45,6 +45,7 @@ namespace TGC.Group.Model
 		private readonly List<TgcMesh> puertas = new List<TgcMesh>();
         private ElipsoidCollisionManager collisionManager;
         float larg = 4;
+        private float velocidadConsumo = 50f;
         private Vector3 vectorOffset =  new Vector3(3,30,5);
         private Checkpoint ClosestCheckPoint;
         List<TgcArrow> ArrowsClosesCheckPoint;
@@ -235,7 +236,7 @@ namespace TGC.Group.Model
             collisionManager = new ElipsoidCollisionManager();
             collisionManager.GravityEnabled = true;
 
-            luz= new Linterna(40);
+            luz = new Linterna(90,1f);
         }
  
         private void godMod() {
@@ -274,9 +275,7 @@ namespace TGC.Group.Model
 			}
            
            }
-
-	
-			   //seteo de velocidades
+    	   //seteo de velocidades
 		private void controlDeArmario(Collider mesh)
 		{
 			if ((boundPersonaje.Center - mesh.BoundingSphere.Center).Length() < (boundPersonaje.Radius.Length() + mesh.BoundingSphere.Radius))
@@ -296,7 +295,6 @@ namespace TGC.Group.Model
 		    var velocidadCaminar = 1.0f;
             var moveVector = new Vector3(0, 0, 0);
             //Calcular proxima posicion de personaje segun Input
-            var moveForward = 0f;
             var moving = false;
             //Adelante
             if (Input.keyDown(Key.W)){
@@ -318,7 +316,6 @@ namespace TGC.Group.Model
             else{
                 personaje.playAnimation("StandBy", true);
             }
-
 
             //Vector de movimiento
             var movementVector = Vector3.Empty;
@@ -387,13 +384,7 @@ namespace TGC.Group.Model
                 Clipboard.SetText(Clipboard.GetText() + String.Format(" checkpoints.Add(new Checkpoint(new Vector3({0}f, {1}f, {2}f) + origenMapa)); \n", Camara.Position.X - CheckpointHelper.origenMapa.X, 150 - CheckpointHelper.origenMapa.Y, Camara.Position.Z - CheckpointHelper.origenMapa.Z));
                 CheckpointHelper.checkpoints.Add(new Checkpoint(new Vector3(Camara.Position.X, 150, Camara.Position.Z)));
             }
-
-            
-            //DES/Habilita la linterna
-            /*if (Input.keyPressed(Key.L))
-            {
-                Linterna linterna = new Linterna();
-            }*/
+            //luz.consumir(ElapsedTime);
         }
 
         private void renderPuerta() {
@@ -409,15 +400,15 @@ namespace TGC.Group.Model
             DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(getOffset()), 0, 30,Color.OrangeRed);
             DrawText.drawText("armarios: " + armarios.Count.ToString(), 0, 50, Color.OrangeRed);
 			DrawText.drawText("puertas " + puertas.Count.ToString(), 0, 70, Color.OrangeRed);
+            DrawText.drawText(luz.getNombreYDuracion(), 0, 90, Color.OrangeRed);
+            //Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
 
-			//Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
-
-			//DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
-			//ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
-			//ArrowsClosesCheckPoint.ForEach(a => a.render());
-			//renderPuerta();
-			//personaje.animateAndRender(ElapsedTime);
-			personaje.BoundingBox.render();
+            //DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
+            //ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
+            //ArrowsClosesCheckPoint.ForEach(a => a.render());
+            //renderPuerta();
+            //personaje.animateAndRender(ElapsedTime);
+            personaje.BoundingBox.render();
             meshRecargaLuz.render();
 			// monstruo.animateAndRender(ElapsedTime);
 			//for (int i = 0; i <= 24; i++) {
@@ -438,16 +429,17 @@ namespace TGC.Group.Model
 					var r = TgcCollisionUtils.classifyFrustumAABB(Frustum, mesh.BoundingBox);
 					if (r != TgcCollisionUtils.FrustumResult.OUTSIDE)
 					{
-                        DrawText.drawText(luz.getNombreYDuracion(), 0, 90, Color.OrangeRed);
                         luz.aplicarEfecto(mesh,getOffset(), direccionLookAt);
 						mesh.render();
-					}
+                    }
 				}
 			}
+            //luz.consumir(ElapsedTime);
+
             //Deshabilitar para que no dibuje los checkpoints en el mapa
-           // CheckpointHelper.renderAll();
-			//Finaliza el render y presenta en pantalla, al igual que el preRender se debe para casos puntuales es mejor utilizar a mano las operaciones de EndScene y PresentScene
-			PostRender();
+            // CheckpointHelper.renderAll();
+            //Finaliza el render y presenta en pantalla, al igual que el preRender se debe para casos puntuales es mejor utilizar a mano las operaciones de EndScene y PresentScene
+            PostRender();
         }
 
         public override void Dispose()
