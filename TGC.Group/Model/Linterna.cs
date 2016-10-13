@@ -29,14 +29,14 @@ namespace TGC.Group.Model
             mesh.Effect.SetValue("lightIntensity", 75f);
             mesh.Effect.SetValue("lightAttenuation", 0.5750f);
             mesh.Effect.SetValue("spotLightAngleCos", FastMath.ToRad(45f));
-            mesh.Effect.SetValue("spotLightExponent", 7f);
+            mesh.Effect.SetValue("spotLightExponent", 20f);
 
             //Cargar variables de shader de Material. El Material en realidad deberia ser propio de cada mesh. Pero en este ejemplo se simplifica con uno comun para todos
             mesh.Effect.SetValue("materialEmissiveColor", ColorValue.FromColor(Color.Black));
             mesh.Effect.SetValue("materialAmbientColor", ColorValue.FromColor(Color.White));
             mesh.Effect.SetValue("materialDiffuseColor", ColorValue.FromColor(Color.White));
             mesh.Effect.SetValue("materialSpecularColor", ColorValue.FromColor(Color.White));
-            mesh.Effect.SetValue("materialSpecularExp", 0f);
+            mesh.Effect.SetValue("materialSpecularExp", 20f);
 
             //BAJAR DURACION Y VERIFICAR
         }

@@ -26,6 +26,7 @@ namespace TGC.Group.Model
         private TgcBoundingElipsoid boundMonstruo;
         private TgcSkeletalMesh monstruo;
         private TgcMesh unMesh;
+        private TgcBox meshRecargaLuz;
         private List<Luz> luces= new List<Luz>();
         private bool flagGod = false;
 		private Matrix cameraRotation;
@@ -202,6 +203,10 @@ namespace TGC.Group.Model
 			cameraRotation = Matrix.RotationX(updownRot) * Matrix.RotationY(leftrightRot);
 			RotationSpeed = 0.1f;
             viewVector = new Vector3(1,0,0);
+
+            meshRecargaLuz = TgcBox.fromSize(new Vector3(30, 30, 30), Color.Red);
+            var posicionMeshRecarga = new Vector3(85f,179.76f, 895f);
+            meshRecargaLuz.move(posicionMeshRecarga);
             //initPuertaGiratoria();   
             //Almacenar volumenes de colision del escenario
             objetosColisionables.Clear();
