@@ -13,7 +13,7 @@ namespace TGC.Group.Model
     class Checkpoint
     {
         public Boolean Checked { get; set; }
-        public HashSet<Checkpoint> Neighbors { get; set; }
+        public List<Checkpoint> Neighbors { get; set; }
         public Vector3 Position { get; set; }
         public TgcArrow Arrow { get; set; }
         public TgcBox Point { get; set; }

@@ -49,6 +49,8 @@ namespace TGC.Group.Model
         private Vector3 vectorOffset =  new Vector3(3,30,5);
         private Checkpoint ClosestCheckPoint;
         List<TgcArrow> ArrowsClosesCheckPoint;
+        private Vector3 objetive;
+
 		private TgcMesh setMeshToOrigin(TgcMesh mesh)
  		{
  			//Desplazar los vertices del mesh para que tengan el centro del AABB en el origen
@@ -132,7 +134,7 @@ namespace TGC.Group.Model
             //IMPORTANTE PREGUNTAR PORQUE DEBERIA ESTAR DESHABILITADO AUTOTRANSFORM
             personaje.AutoTransformEnable = true;
             personaje.Scale = new Vector3(1.0f, 1.0f, 1.0f);
-            personaje.Position = new Vector3(82f,110f, 886);
+            personaje.Position = new Vector3(325, 120, 474);
             personaje.rotateY(Geometry.DegreeToRadian(180f));
             boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter(), personaje.BoundingBox.calculateAxisRadius());
         }
@@ -171,13 +173,13 @@ namespace TGC.Group.Model
 
             monstruo.AutoTransformEnable = true;
             //Escalarlo porque es muy grande
-            monstruo.Position = new Vector3(325,101, 475);
+            monstruo.Position = new Vector3(325, 120, 474);
             //Escalamos el personaje ya que sino la escalera es demasiado grande.
             monstruo.Scale = new Vector3(0.65f, 0.65f, 0.65f);
 
             monstruo.playAnimation(animationList[0], true);
 
-            //boundMonstruo = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter() + new Vector3(0, 0, 0), new Vector3(12, 28, 12));
+            boundMonstruo = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter() + new Vector3(0, 0, 0), new Vector3(12, 28, 12));
         
             
         }
@@ -385,6 +387,8 @@ namespace TGC.Group.Model
                 CheckpointHelper.checkpoints.Add(new Checkpoint(new Vector3(Camara.Position.X, 150, Camara.Position.Z)));
             }
             //luz.consumir(ElapsedTime);
+
+                     
         }
 
         private void renderPuerta() {
@@ -401,16 +405,16 @@ namespace TGC.Group.Model
             DrawText.drawText("armarios: " + armarios.Count.ToString(), 0, 50, Color.OrangeRed);
 			DrawText.drawText("puertas " + puertas.Count.ToString(), 0, 70, Color.OrangeRed);
             DrawText.drawText(luz.getNombreYDuracion(), 0, 90, Color.OrangeRed);
-            //Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
+            Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
 
-            //DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
-            //ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
-            //ArrowsClosesCheckPoint.ForEach(a => a.render());
+            DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
+            ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
+            ArrowsClosesCheckPoint.ForEach(a => a.render());
             //renderPuerta();
             //personaje.animateAndRender(ElapsedTime);
             personaje.BoundingBox.render();
             meshRecargaLuz.render();
-			// monstruo.animateAndRender(ElapsedTime);
+			monstruo.animateAndRender(ElapsedTime);
 			//for (int i = 0; i <= 24; i++) {
 			//	escenario.Meshes[i].render();
 			//}
@@ -429,15 +433,16 @@ namespace TGC.Group.Model
 					var r = TgcCollisionUtils.classifyFrustumAABB(Frustum, mesh.BoundingBox);
 					if (r != TgcCollisionUtils.FrustumResult.OUTSIDE)
 					{
-                        luz.aplicarEfecto(mesh,getOffset(), direccionLookAt);
+                        //luz.aplicarEfecto(mesh,getOffset(), direccionLookAt);
 						mesh.render();
                     }
 				}
 			}
+         
             //luz.consumir(ElapsedTime);
 
             //Deshabilitar para que no dibuje los checkpoints en el mapa
-            // CheckpointHelper.renderAll();
+            CheckpointHelper.renderAll();
             //Finaliza el render y presenta en pantalla, al igual que el preRender se debe para casos puntuales es mejor utilizar a mano las operaciones de EndScene y PresentScene
             PostRender();
         }
@@ -451,7 +456,26 @@ namespace TGC.Group.Model
 
         public void logicaDelMonstruo()
         {
+            var monsterClosestCheckpoint = CheckpointHelper.GetClosestCheckPoint(monstruo.Position);
+            var avatarClosestCheckpoint = CheckpointHelper.GetClosestCheckPoint(this.Camara.Position);
+            if (monsterClosestCheckpoint.Neighbors.Contains(avatarClosestCheckpoint) ||avatarClosestCheckpoint == monsterClosestCheckpoint)
+            {
+                objetive = this.Camara.Position;
+            }
+            else
+            {
+                //Encontrar el algoritmo del camino más corto de un checkpoint al otro
+                var nextCheckpoint = monsterClosestCheckpoint.Neighbors.Find(c => c.CanArriveTo(avatarClosestCheckpoint));
+                objetive = nextCheckpoint.Position;
+            }
 
+         
+            Vector3 dir = objetive - this.monstruo.Position;
+
+            dir = new Vector3(dir.X, 0f, dir.Z);
+            dir.Normalize();
+
+            monstruo.move(dir * 0.7f);
         }
     }
 }

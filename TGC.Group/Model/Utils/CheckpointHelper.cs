@@ -31,7 +31,7 @@ namespace TGC.Group.Model.Utils
                 List<Checkpoint> unCheckedCheckpoints = checkPoints;
                 unCheckedCheckpoints = unCheckedCheckpoints.FindAll(c => checkPoint.hasDirectSightWith(c));
                 checkPoint.Neighbors =
-                    new HashSet<Checkpoint>(
+                    new List<Checkpoint>(
                         unCheckedCheckpoints.FindAll(c => checkPoint.hasDirectSightWith(c))
                             .FindAll(
                                 neighbor =>
