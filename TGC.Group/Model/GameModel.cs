@@ -131,7 +131,7 @@ namespace TGC.Group.Model
                         MediaDir + "SkeletalAnimations\\BasicHuman\\Animations\\StandBy-TgcSkeletalAnim.xml",
                         MediaDir + "SkeletalAnimations\\BasicHuman\\Animations\\Jump-TgcSkeletalAnim.xml"
                     });
-            //IMPORTANTE PREGUNTAR PORQUE DEBERIA ESTAR DESHABILITADO AUTOTRANSFORM
+
             personaje.AutoTransformEnable = true;
             personaje.Scale = new Vector3(1.0f, 1.0f, 1.0f);
             personaje.Position = new Vector3(325, 120, 474);
@@ -179,9 +179,9 @@ namespace TGC.Group.Model
 
             monstruo.playAnimation(animationList[0], true);
 
-            boundMonstruo = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter() + new Vector3(0, 0, 0), new Vector3(12, 28, 12));
-        
-            
+            boundMonstruo = new TgcBoundingElipsoid(monstruo.BoundingBox.calculateBoxCenter(), monstruo.BoundingBox.calculateAxisRadius());
+
+
         }
         public override void Init()
         {
@@ -210,7 +210,7 @@ namespace TGC.Group.Model
 
             meshRecargaLuz = TgcBox.fromSize(new Vector3(10, 10, 10), Color.Red);
             meshRecargaLuz.AutoTransformEnable = true;
-            meshRecargaLuz.Position= new Vector3(85, 150, 1000);
+            meshRecargaLuz.Position= new Vector3(513.33f,179.7675f,595.4409f);
             objetosRecarga.Add(meshRecargaLuz);
             //initPuertaGiratoria();   
             //Almacenar volumenes de colision del escenario
@@ -238,7 +238,7 @@ namespace TGC.Group.Model
             collisionManager = new ElipsoidCollisionManager();
             collisionManager.GravityEnabled = true;
 
-            luz = new Linterna(90,1f);
+            luz = new Linterna(100,1f);
         }
  
         private void godMod() {
@@ -298,13 +298,23 @@ namespace TGC.Group.Model
             var moveVector = new Vector3(0, 0, 0);
             //Calcular proxima posicion de personaje segun Input
             var moving = false;
-            //Adelante
+
             if (Input.keyDown(Key.W)){
                 moving = true;
                 moveVector += new Vector3(1, 0, 0) * velocidadCaminar;
             }
+            //Strafe right
+            if (Input.keyDown(Key.D))
+            {
+                moveVector += new Vector3(0, 0, -1) * velocidadCaminar;
+            }
 
-            //Atras
+            //Strafe left
+            if (Input.keyDown(Key.A))
+            {
+                moveVector += new Vector3(0, 0, 1) * velocidadCaminar;
+            }
+
             if (Input.keyDown(Key.S))
             {
                 moveVector += new Vector3(-1, 0, 0) * velocidadCaminar;
@@ -343,7 +353,7 @@ namespace TGC.Group.Model
                 //Actualizar valores de gravedad
                 collisionManager.GravityEnabled = true;
 				collisionManager.GravityForce = new Vector3(0f, 2f, 0f);
-
+                collisionManager.SlideFactor = 2;
 				foreach (var puerta in puertas)
 				{
 					animacionDePuerta(puerta);
@@ -355,8 +365,8 @@ namespace TGC.Group.Model
 					{
 						controlDeArmario(armario);}
 				}
-
-			}
+                luz.consumir(ElapsedTime);
+            }
         }
 
         public override void Update()
@@ -366,7 +376,7 @@ namespace TGC.Group.Model
             moverPersonaje();
             //animacionDePuerta();
             
-            logicaDelMonstruo();
+            //logicaDelMonstruo();
 
             if (Input.keyPressed(Key.G)){
                 if (!flagGod)
@@ -405,25 +415,20 @@ namespace TGC.Group.Model
             DrawText.drawText("armarios: " + armarios.Count.ToString(), 0, 50, Color.OrangeRed);
 			DrawText.drawText("puertas " + puertas.Count.ToString(), 0, 70, Color.OrangeRed);
             DrawText.drawText(luz.getNombreYDuracion(), 0, 90, Color.OrangeRed);
-            Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
+            #region ComentoCheckPoint
+            //Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
 
-            DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
-            ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
-            ArrowsClosesCheckPoint.ForEach(a => a.render());
+            //DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
+            //ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
+            //ArrowsClosesCheckPoint.ForEach(a => a.render());
+            //monstruo.animateAndRender(ElapsedTime);
+            //CheckpointHelper.renderAll();
+            #endregion
             //renderPuerta();
             //personaje.animateAndRender(ElapsedTime);
             personaje.BoundingBox.render();
             meshRecargaLuz.render();
-			monstruo.animateAndRender(ElapsedTime);
-			//for (int i = 0; i <= 24; i++) {
-			//	escenario.Meshes[i].render();
-			//}
-			/*foreach (var mesh in escenario.Meshes)
-            {
-                //Renderizar modelo
-                mesh.render();
-                mesh.BoundingBox.render();
-            }*/
+			
 			foreach (var mesh in escenario.Meshes)
 			{
 				//Nos ocupamos solo de las mallas habilitadas
@@ -433,16 +438,13 @@ namespace TGC.Group.Model
 					var r = TgcCollisionUtils.classifyFrustumAABB(Frustum, mesh.BoundingBox);
 					if (r != TgcCollisionUtils.FrustumResult.OUTSIDE)
 					{
-                        //luz.aplicarEfecto(mesh,getOffset(), direccionLookAt);
+                        luz.aplicarEfecto(mesh,getOffset(), direccionLookAt);
 						mesh.render();
                     }
 				}
 			}
-         
-            //luz.consumir(ElapsedTime);
-
             //Deshabilitar para que no dibuje los checkpoints en el mapa
-            CheckpointHelper.renderAll();
+            
             //Finaliza el render y presenta en pantalla, al igual que el preRender se debe para casos puntuales es mejor utilizar a mano las operaciones de EndScene y PresentScene
             PostRender();
         }
@@ -469,7 +471,6 @@ namespace TGC.Group.Model
                 objetive = nextCheckpoint.Position;
             }
 
-         
             Vector3 dir = objetive - this.monstruo.Position;
 
             dir = new Vector3(dir.X, 0f, dir.Z);

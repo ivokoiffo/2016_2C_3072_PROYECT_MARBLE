@@ -1,0 +1,37 @@
+CORRECCIONES
+
+EN ALGUNOS CASOS CUANDO EL TIPO ESTA EN LA PARED, moves el mouse y la camara ve para afuera del mapa "lo azul"
+HAY QUE LOGRAR QUE LA CAMARA SIEMPRE SIGA A LAS MANOS DEL TIPO, LO QUE HAY QUE HACER ES TOCAR vectorOffset PARA QUE SIGA BIEN
+
+Puntos obligatorios faltantes: 
+* No se vieron enemigo ni puertas (controles muy difíciles de usar) 
+* Iluminación no es buena, falta vela y farol. 
+* No hay HUD (verifiquen elementos obligatorios para todos los trabajos) 
+
+Comentarios: 
+* Mejorar la forma de esconderse, utilizar textura trasparente o stencil. 
+* Faltan objetos e ambientación 
+* Cambiar texturas. En paredes para que parezcan diferentes habitaciones. 
+
+HAY QUE HACER UNA PRESENTACION, MENU PARA CONFIGURAR, JUEGO Y FINAL
+
+
+● Funcionalidades obligatorias para 1ra entrega:
+
+○ El jugador tendrá linterna, lámpara o vela, cada una de estas iluminarán de forma
+diferente el escenario.
+○ Los objetos de iluminación que use el jugador tendrán una duración, deberá buscar
+más objetos iguales en el escenario o utilizar otros.
+● Funcionalidades obligatorias para 2da entrega
+○ El escenario tendrá muebles, cajas y objetos donde el jugador podrá esconderse si
+no es perseguido.
+○ El enemigo controlado por la IA recorre diferentes caminos, elegidos en el momento
+de crear el escenario, en caso de ver al jugador según un rango de visión definido, lo
+perseguirá hasta que el jugador escape o sea atrapado.
+○ El jugador, podrá abrir puertas y cerrarlas, cada interacción tomará un tiempo en el
+cual el jugador no podrá moverse hasta que la puerta esté abierta o cerrada por
+completo.
+○ El enemigo no podrá abrir puertas, salvo que estas estén definidas en su camino de
+vigilia.
+○ Las luces del jugador deben generar sombras.
+○ Algunos objetos estáticos del escenario generan luces y sombras.

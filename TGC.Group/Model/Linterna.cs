@@ -42,12 +42,6 @@ namespace TGC.Group.Model
             //BAJAR DURACION Y VERIFICAR
         }
 
-        public override void consumir(float tiempo)
-        {
-           // var dur = (tiempo * VelocidadConsumo);
-            Duracion -= tiempo;
-        }
-
         public override string getNombreYDuracion()
         {
             return "Duracion de Linterna es de:"+ Duracion;
