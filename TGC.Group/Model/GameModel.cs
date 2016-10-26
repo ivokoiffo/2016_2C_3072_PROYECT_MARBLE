@@ -133,8 +133,8 @@ namespace TGC.Group.Model
                     });
 
             personaje.AutoTransformEnable = true;
-            personaje.Scale = new Vector3(1.0f, 1.0f, 1.0f);
-            personaje.Position = new Vector3(325, 120, 474);
+            personaje.Scale = new Vector3(1f, 1f, 1f);
+            personaje.Position = new Vector3(325f,102f, 474f);
             personaje.rotateY(Geometry.DegreeToRadian(180f));
             boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter(), personaje.BoundingBox.calculateAxisRadius());
         }
@@ -236,13 +236,13 @@ namespace TGC.Group.Model
 
             //Crear manejador de colisiones
             collisionManager = new ElipsoidCollisionManager();
-            collisionManager.GravityEnabled = true;
+            collisionManager.GravityEnabled = false;
 
             luz = new Linterna(100,1f);
         }
  
         private void godMod() {
-            Camara = new CamaraGod(personaje.Position,Input);
+            Camara = new CamaraGod(true,personaje.Position,Input);
         }
         //OFFSET PARA PRIMERA PERSONA CON MANOS
         private Vector3 getOffset() {
@@ -350,9 +350,6 @@ namespace TGC.Group.Model
                 lookAt = Vector3.Add(getOffset(), direccionLookAt); //vector lookAt final
 
                 Camara.SetCamera(getOffset(),lookAt);
-                //Actualizar valores de gravedad
-                collisionManager.GravityEnabled = true;
-				collisionManager.GravityForce = new Vector3(0f, 2f, 0f);
                 collisionManager.SlideFactor = 2;
 				foreach (var puerta in puertas)
 				{
@@ -382,7 +379,6 @@ namespace TGC.Group.Model
                 if (!flagGod)
                 {
                     godMod();
-				
 					flagGod = true;
                 }
                 else {
@@ -396,9 +392,7 @@ namespace TGC.Group.Model
                 Clipboard.SetText(Clipboard.GetText() + String.Format(" checkpoints.Add(new Checkpoint(new Vector3({0}f, {1}f, {2}f) + origenMapa)); \n", Camara.Position.X - CheckpointHelper.origenMapa.X, 150 - CheckpointHelper.origenMapa.Y, Camara.Position.Z - CheckpointHelper.origenMapa.Z));
                 CheckpointHelper.checkpoints.Add(new Checkpoint(new Vector3(Camara.Position.X, 150, Camara.Position.Z)));
             }
-            //luz.consumir(ElapsedTime);
-
-                     
+  
         }
 
         private void renderPuerta() {
@@ -409,6 +403,7 @@ namespace TGC.Group.Model
         public override void Render()
         {
             //Inicio el render de la escena, para ejemplos simples. Cuando tenemos postprocesado o shaders es mejor realizar las operaciones según nuestra conveniencia.
+
             PreRender();
             DrawText.drawText("[G]-Habilita GodMod ",0,20, Color.OrangeRed);
             DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(getOffset()), 0, 30,Color.OrangeRed);
@@ -438,8 +433,10 @@ namespace TGC.Group.Model
 					var r = TgcCollisionUtils.classifyFrustumAABB(Frustum, mesh.BoundingBox);
 					if (r != TgcCollisionUtils.FrustumResult.OUTSIDE)
 					{
-                        luz.aplicarEfecto(mesh,getOffset(), direccionLookAt);
+                        if (flagGod) { luz.deshabilitarEfecto(mesh); } else {
+                            luz.aplicarEfecto(mesh, getOffset(), direccionLookAt); }
 						mesh.render();
+
                     }
 				}
 			}
