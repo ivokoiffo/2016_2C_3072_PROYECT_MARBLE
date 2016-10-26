@@ -52,6 +52,12 @@ namespace TGC.Group.Model
             this.positionEye = positionEye;
         }
 
+
+        public CamaraGod(bool lockCam,Vector3 positionEye, TgcD3dInput input) : this(input)
+        {
+            LockCam = true;
+        }
+
         public CamaraGod(Vector3 positionEye, float moveSpeed, float jumpSpeed, TgcD3dInput input)
             : this(positionEye, input)
         {
@@ -144,7 +150,7 @@ namespace TGC.Group.Model
             }
 
             //Solo rotar si se esta aprentando el boton izq del mouse
-            if (lockCam || Input.buttonDown(TgcD3dInput.MouseButtons.BUTTON_LEFT))
+            if (lockCam)
             {
                 leftrightRot -= -Input.XposRelative * RotationSpeed;
                 updownRot -= Input.YposRelative * RotationSpeed;
