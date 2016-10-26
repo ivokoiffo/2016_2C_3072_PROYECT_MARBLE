@@ -174,7 +174,7 @@ namespace TGC.Group.Model
             monstruo.AutoTransformEnable = true;
             //Escalarlo porque es muy grande
             monstruo.Position = new Vector3(325, 120, 474);
-            //Escalamos el personaje ya que sino la escalera es demasiado grande.
+            //Escalamos el personaje 
             monstruo.Scale = new Vector3(0.65f, 0.65f, 0.65f);
 
             monstruo.playAnimation(animationList[0], true);
@@ -476,6 +476,9 @@ namespace TGC.Group.Model
             dir.Normalize();
 
             monstruo.move(dir * 0.7f);
+
+            monstruo.playAnimation("Caminando", true);
+
         }
     }
 }
