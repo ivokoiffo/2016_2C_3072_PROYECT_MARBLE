@@ -27,6 +27,10 @@ namespace TGC.Group.Model
         private TgcSkeletalMesh monstruo;
         private TgcMesh unMesh;
         private TgcBox meshRecargaLuz;
+        private CustomSprite barra;
+        private float escalaActual=0.45f;
+        private CustomSprite energia;
+        private Drawer2D drawer2D;
         private List<TgcBox> objetosRecarga = new List<TgcBox>();
         private Luz luz;
         private bool flagGod = false;
@@ -45,7 +49,6 @@ namespace TGC.Group.Model
 		private readonly List<TgcMesh> puertas = new List<TgcMesh>();
         private ElipsoidCollisionManager collisionManager;
         float larg = 4;
-        private float velocidadConsumo = 50f;
         private Vector3 vectorOffset =  new Vector3(3,30,5);
         private Checkpoint ClosestCheckPoint;
         List<TgcArrow> ArrowsClosesCheckPoint;
@@ -194,7 +197,7 @@ namespace TGC.Group.Model
             Clipboard.Clear();
             //Device de DirectX para crear primitivas.
             var d3dDevice = D3DDevice.Instance.Device;
-			d3dDevice.ShowCursor(true);
+            d3dDevice.ShowCursor(true);
             //Seteo el personaje
             seteoDePersonaje();
             //Seteo del monsturo
@@ -203,14 +206,14 @@ namespace TGC.Group.Model
             escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\MPmapa+El1ConArmario-TgcScene.xml");
 
             leftrightRot = FastMath.PI_HALF;
-			updownRot = -FastMath.PI / 10.0f;
-			cameraRotation = Matrix.RotationX(updownRot) * Matrix.RotationY(leftrightRot);
-			RotationSpeed = 0.1f;
-            viewVector = new Vector3(1,0,0);
+            updownRot = -FastMath.PI / 10.0f;
+            cameraRotation = Matrix.RotationX(updownRot) * Matrix.RotationY(leftrightRot);
+            RotationSpeed = 0.1f;
+            viewVector = new Vector3(1, 0, 0);
 
             meshRecargaLuz = TgcBox.fromSize(new Vector3(10, 10, 10), Color.Red);
             meshRecargaLuz.AutoTransformEnable = true;
-            meshRecargaLuz.Position= new Vector3(513.33f,179.7675f,595.4409f);
+            meshRecargaLuz.Position = new Vector3(513.33f, 179.7675f, 595.4409f);
             objetosRecarga.Add(meshRecargaLuz);
             //initPuertaGiratoria();   
             //Almacenar volumenes de colision del escenario
@@ -218,29 +221,42 @@ namespace TGC.Group.Model
             CollisionManager.obstaculos = new List<BoundingBoxCollider>();
             foreach (var mesh in escenario.Meshes)
             {
-				if (mesh.Name.Contains("Puerta"))
-				{
-					mesh.AutoTransformEnable = true;
-					puertas.Add(mesh);
-				
-				}
-				if (mesh.Name.Contains("Placard")|| mesh.Name.Contains("Locker")) {
-					armarios.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
-				}
+                if (mesh.Name.Contains("Puerta"))
+                {
+                    mesh.AutoTransformEnable = true;
+                    puertas.Add(mesh);
+
+                }
+                if (mesh.Name.Contains("Placard") || mesh.Name.Contains("Locker"))
+                {
+                    armarios.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
+                }
                 objetosColisionables.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
                 CollisionManager.obstaculos.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
             }
 
             CheckpointHelper.BuildCheckpoints();
-           
+
 
             //Crear manejador de colisiones
             collisionManager = new ElipsoidCollisionManager();
             collisionManager.GravityEnabled = false;
 
-            luz = new Linterna(100,1f);
+            luz = new Linterna(100, 50f);
+            drawer2D = new Drawer2D();
+            //Crear Sprite
+            barra = new CustomSprite();
+            energia = new CustomSprite();
+            barra.Bitmap = new CustomBitmap(MediaDir + "\\barra.png", D3DDevice.Instance.Device);
+            barra.Scaling = new Vector2(0.5f, 0.5f);
+            // barraDuracion.Color = Color.Empty;
+            //var textureSize = barra.Bitmap.Size;
+            barra.Position = new Vector2(0, 0);
+            energia.Bitmap = new CustomBitmap(MediaDir + "\\energia.png", D3DDevice.Instance.Device);
+            energia.Scaling = new Vector2(escalaActual, 0.4f);
+            energia.Position = new Vector2(22+barra.Position.X, 16+barra.Position.Y);
         }
- 
+
         private void godMod() {
             Camara = new CamaraGod(true,personaje.Position,Input);
         }
@@ -392,7 +408,13 @@ namespace TGC.Group.Model
                 Clipboard.SetText(Clipboard.GetText() + String.Format(" checkpoints.Add(new Checkpoint(new Vector3({0}f, {1}f, {2}f) + origenMapa)); \n", Camara.Position.X - CheckpointHelper.origenMapa.X, 150 - CheckpointHelper.origenMapa.Y, Camara.Position.Z - CheckpointHelper.origenMapa.Z));
                 CheckpointHelper.checkpoints.Add(new Checkpoint(new Vector3(Camara.Position.X, 150, Camara.Position.Z)));
             }
-  
+            actualizarEnergia();
+        }
+
+        private void actualizarEnergia()
+        {
+            escalaActual = luz.Energia / 222.2f;
+            energia.Scaling = new Vector2(escalaActual, 0.4f);
         }
 
         private void renderPuerta() {
@@ -405,11 +427,20 @@ namespace TGC.Group.Model
             //Inicio el render de la escena, para ejemplos simples. Cuando tenemos postprocesado o shaders es mejor realizar las operaciones según nuestra conveniencia.
 
             PreRender();
+            
             DrawText.drawText("[G]-Habilita GodMod ",0,20, Color.OrangeRed);
             DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(getOffset()), 0, 30,Color.OrangeRed);
             DrawText.drawText("armarios: " + armarios.Count.ToString(), 0, 50, Color.OrangeRed);
 			DrawText.drawText("puertas " + puertas.Count.ToString(), 0, 70, Color.OrangeRed);
-            DrawText.drawText(luz.getNombreYDuracion(), 0, 90, Color.OrangeRed);
+            DrawText.drawText(luz.getNombreYEnergia(), 0, 90, Color.OrangeRed);
+            drawer2D.BeginDrawSprite();
+
+            //Dibujar sprite (si hubiese mas, deberian ir todos aquí)
+            drawer2D.DrawSprite(barra);
+            drawer2D.DrawSprite(energia);
+            //drawer2D.DrawLine(new Vector2(0,30), new Vector2(40,30), Color.Red, 40, false);
+            //Finalizar el dibujado de Sprites
+            drawer2D.EndDrawSprite();
             #region ComentoCheckPoint
             //Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
 

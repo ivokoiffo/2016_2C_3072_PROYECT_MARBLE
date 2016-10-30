@@ -14,8 +14,8 @@ namespace TGC.Group.Model
 {
     class Linterna : Luz
     {
-        public Linterna(float duracion,float velocidadConsumo) {
-            Duracion = duracion;
+        public Linterna(float energia,float velocidadConsumo) {
+            Energia = energia;
             VelocidadConsumo = velocidadConsumo;
         }
         public override void aplicarEfecto(TgcMesh mesh, Vector3 posicionCamara, Vector3 direccionLuz)
@@ -27,7 +27,7 @@ namespace TGC.Group.Model
             mesh.Effect.SetValue("lightPosition", TgcParserUtils.vector3ToFloat4Array(posicionCamara));
             mesh.Effect.SetValue("eyePosition", TgcParserUtils.vector3ToFloat4Array(posicionCamara));
             mesh.Effect.SetValue("spotLightDir", TgcParserUtils.vector3ToFloat3Array(direccionLuz));
-            mesh.Effect.SetValue("lightIntensity", Duracion);
+            mesh.Effect.SetValue("lightIntensity", Energia);
             mesh.Effect.SetValue("lightAttenuation", 0.5750f);
             mesh.Effect.SetValue("spotLightAngleCos", FastMath.ToRad(45f));
             mesh.Effect.SetValue("spotLightExponent", 20f);
@@ -42,9 +42,9 @@ namespace TGC.Group.Model
             //BAJAR DURACION Y VERIFICAR
         }
 
-        public override string getNombreYDuracion()
+        public override string getNombreYEnergia()
         {
-            return "Duracion de Linterna es de:"+ Duracion;
+            return "Duracion de Linterna es de:"+ Energia;
         }
     }
 }

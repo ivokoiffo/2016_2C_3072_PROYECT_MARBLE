@@ -20,7 +20,7 @@ namespace TGC.Group.Model
         public bool pasoPrimero = false;
         public float tiempoAcumulado = 0;
         public float duracionInicial;
-        public float Duracion { get; set; }
+        public float Energia { get; set; }
         public float Nombre { get;}
         public float VelocidadConsumo { get; set; } 
         abstract public void aplicarEfecto(TgcMesh mesh,Vector3 posicionCamara, Vector3 direccionLuz);
@@ -37,12 +37,13 @@ namespace TGC.Group.Model
         */
         public void consumir(float tiempo)
         {
+            float ener = 0;
             if (pasoPrimero == true)
             {
                 if (tiempoPrimerRender == 0)
                 {
                     tiempoPrimerRender = tiempo;
-                    duracionInicial = Duracion;
+                    duracionInicial = Energia;
                 }else{
                     if (tiempoSegundoRender == 0)
                     {
@@ -55,16 +56,21 @@ namespace TGC.Group.Model
             if (tiempoPrimerRender != 0 && tiempoSegundoRender != 0)
             {
                 tiempoAcumulado += tiempo;
-                Duracion = getDuracionPorFuncion();
+                ener = getEnergiaPorFuncion();
+                if (ener <= 0) {
+                    Energia = 0;
+                }else{
+                    Energia = ener;
+                }
             }
         }
 
-        private float getDuracionPorFuncion()
+        private float getEnergiaPorFuncion()
         {
             var pendiente = tiempoPrimerRender - tiempoSegundoRender;
             return (tiempoAcumulado * pendiente * VelocidadConsumo) + duracionInicial;
         }
 
-        abstract public string getNombreYDuracion();
+        abstract public string getNombreYEnergia();
     }
 }
