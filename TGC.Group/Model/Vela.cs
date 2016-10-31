@@ -12,15 +12,16 @@ using TGC.Core.Utils;
 
 namespace TGC.Group.Model
 {
-    class Linterna : Luz
+    class Vela : Luz
     {
-        public Linterna(float velocidadConsumo) {
-            VelocidadConsumo = velocidadConsumo;
+        public Vela()
+        {
+            VelocidadConsumo = 0.005f;
             setMaximaEnergia();
         }
-        public Linterna()
+        public Vela(float velocidadConsumo)
         {
-            VelocidadConsumo = 15f;
+            VelocidadConsumo = velocidadConsumo;
             setMaximaEnergia();
         }
         public override void aplicarEfecto(TgcMesh mesh, Vector3 posicionCamara, Vector3 direccionLuz)
@@ -28,36 +29,35 @@ namespace TGC.Group.Model
             mesh.Effect = TgcShaders.Instance.TgcMeshSpotLightShader;
             //El Technique depende del tipo RenderType del mesh
             mesh.Technique = TgcShaders.Instance.getTgcMeshTechnique(mesh.RenderType);
-            mesh.Effect.SetValue("lightColor", ColorValue.FromColor(Color.White));
+            mesh.Effect.SetValue("lightColor", ColorValue.FromColor(Color.LightGoldenrodYellow));
             mesh.Effect.SetValue("lightPosition", TgcParserUtils.vector3ToFloat4Array(posicionCamara));
             mesh.Effect.SetValue("eyePosition", TgcParserUtils.vector3ToFloat4Array(posicionCamara));
             mesh.Effect.SetValue("spotLightDir", TgcParserUtils.vector3ToFloat3Array(direccionLuz));
-            mesh.Effect.SetValue("lightIntensity", Energia);
-            mesh.Effect.SetValue("lightAttenuation", 0.5750f);
-            mesh.Effect.SetValue("spotLightAngleCos", FastMath.ToRad(45f));
+            mesh.Effect.SetValue("lightIntensity", 24f);
+            mesh.Effect.SetValue("lightAttenuation", 0.1950f);
+            mesh.Effect.SetValue("spotLightAngleCos", FastMath.ToRad(50f));
             mesh.Effect.SetValue("spotLightExponent", 20f);
 
             //Cargar variables de shader de Material. El Material en realidad deberia ser propio de cada mesh. Pero en este ejemplo se simplifica con uno comun para todos
             mesh.Effect.SetValue("materialEmissiveColor", ColorValue.FromColor(Color.Black));
             mesh.Effect.SetValue("materialAmbientColor", ColorValue.FromColor(Color.White));
             mesh.Effect.SetValue("materialDiffuseColor", ColorValue.FromColor(Color.White));
-            mesh.Effect.SetValue("materialSpecularColor", ColorValue.FromColor(Color.White));
-            mesh.Effect.SetValue("materialSpecularExp", 1000000000000000f);
-        }
-
-        public override float getConversion()
-        {
-            return 222.2f;
+            mesh.Effect.SetValue("materialSpecularColor", ColorValue.FromColor(Color.FromArgb(0,255, 147, 41)));
+            mesh.Effect.SetValue("materialSpecularExp", 100000000000000f);
         }
 
         public override string getNombreYEnergia()
         {
-            return "Energia de Linterna es de: "+ Energia;
+            return "Energia de Vela es de: " + Energia;
+        }
+        public override float getConversion()
+        {
+            return 1f;
         }
 
         public override void setMaximaEnergia()
         {
-            Energia = 100;
+            Energia = 0.45f;
         }
     }
 }

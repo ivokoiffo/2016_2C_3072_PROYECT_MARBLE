@@ -72,5 +72,12 @@ namespace TGC.Group.Model
         }
 
         abstract public string getNombreYEnergia();
+        abstract public void setMaximaEnergia();
+
+        abstract public float getConversion();
+        public float getConversionEnergiaABarra()
+        {
+            return Energia / this.getConversion();
+        }
     }
 }

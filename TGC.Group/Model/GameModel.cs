@@ -242,7 +242,7 @@ namespace TGC.Group.Model
             collisionManager = new ElipsoidCollisionManager();
             collisionManager.GravityEnabled = false;
 
-            luz = new Linterna(100, 50f);
+            luz = new Vela();
             drawer2D = new Drawer2D();
             //Crear Sprite
             barra = new CustomSprite();
@@ -413,7 +413,7 @@ namespace TGC.Group.Model
 
         private void actualizarEnergia()
         {
-            escalaActual = luz.Energia / 222.2f;
+            escalaActual = luz.getConversionEnergiaABarra();
             energia.Scaling = new Vector2(escalaActual, 0.4f);
         }
 

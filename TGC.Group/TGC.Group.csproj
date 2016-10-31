@@ -100,6 +100,7 @@
     <Compile Include="Model\Linterna.cs" />
     <Compile Include="Model\Luz.cs" />
     <Compile Include="Model\Utils\CollisionManager.cs" />
+    <Compile Include="Model\Vela.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Form\GameForm.resx">
