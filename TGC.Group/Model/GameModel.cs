@@ -50,7 +50,7 @@ namespace TGC.Group.Model
 		private readonly List<TgcMesh> puertas = new List<TgcMesh>();
         private ElipsoidCollisionManager collisionManager;
         float larg = 4;
-        private Vector3 vectorOffset =  new Vector3(3,30,5);
+        private Vector3 vectorOffset = new Vector3(0, 30, 0);
         private Checkpoint ClosestCheckPoint;
         List<TgcArrow> ArrowsClosesCheckPoint;
         private Vector3 objetive;
