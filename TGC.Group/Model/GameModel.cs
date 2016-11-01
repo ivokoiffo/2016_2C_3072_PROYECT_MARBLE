@@ -213,7 +213,7 @@ namespace TGC.Group.Model
 
             meshRecargaLuz = TgcBox.fromSize(new Vector3(10, 10, 10), Color.Red);
             meshRecargaLuz.AutoTransformEnable = true;
-            meshRecargaLuz.Position = new Vector3(513.33f, 179.7675f, 595.4409f);
+            meshRecargaLuz.Position = new Vector3(513.33f, 120.7675f, 595.4409f);
             objetosRecarga.Add(meshRecargaLuz);
             //initPuertaGiratoria();   
             //Almacenar volumenes de colision del escenario
@@ -378,7 +378,17 @@ namespace TGC.Group.Model
 					{
 						controlDeArmario(armario);}
 				}
+                this.getColisionContraObjetoCarga();
                 luz.consumir(ElapsedTime);
+            }
+        }
+
+        private void getColisionContraObjetoCarga()
+        {
+            if ((boundPersonaje.Center - meshRecargaLuz.BoundingBox.calculateBoxCenter()).Length() < (boundPersonaje.Radius.Length() + meshRecargaLuz.BoundingBox.calculateBoxRadius()))
+            {
+                luz.tiempoAcumulado = 0;
+                luz.setMaximaEnergia();
             }
         }
 

@@ -26,15 +26,9 @@ namespace TGC.Group.Model
         abstract public void aplicarEfecto(TgcMesh mesh,Vector3 posicionCamara, Vector3 direccionLuz);
         public void deshabilitarEfecto(TgcMesh mesh) {
             mesh.Effect = TgcShaders.Instance.TgcMeshShader;
-            mesh.Technique = TgcShaders.Instance.getTgcMeshTechnique(mesh.RenderType);
-        }/*
-        public void getPrimerUpdate(float tiempo) {
-            if (comienzoConShader) {
-                if (segundoRender == true) {  segundoRender = false; }
-                if (primerRender == false) { segundoRender = true; primerRender = true; }
-            }
+            mesh.Technique = TgcShaders.Instance.getTgcMeshTechnique(TgcMesh.MeshRenderType.DIFFUSE_MAP);
         }
-        */
+
         public void consumir(float tiempo)
         {
             float ener = 0;
@@ -44,25 +38,33 @@ namespace TGC.Group.Model
                 {
                     tiempoPrimerRender = tiempo;
                     duracionInicial = Energia;
-                }else{
+                }
+                else
+                {
                     if (tiempoSegundoRender == 0)
                     {
-                            tiempoSegundoRender = tiempoPrimerRender + tiempo;
+                        tiempoSegundoRender = tiempoPrimerRender + tiempo;
                     }
                 }
-            } else {
+            }
+            else
+            {
                 pasoPrimero = true;
             }
             if (tiempoPrimerRender != 0 && tiempoSegundoRender != 0)
             {
                 tiempoAcumulado += tiempo;
                 ener = getEnergiaPorFuncion();
-                if (ener <= 0) {
+                if (ener <= 0)
+                {
                     Energia = 0;
-                }else{
+                }
+                else
+                {
                     Energia = ener;
                 }
             }
+            
         }
 
         private float getEnergiaPorFuncion()
