@@ -87,10 +87,10 @@
       <DependentUpon>Game.settings</DependentUpon>
     </Compile>
     <Compile Include="Model\Luces\Faro.cs" />
+    <Compile Include="Model\Utils\PosCamara.cs" />
     <Compile Include="Model\Utils\Sprite\AnimatedSprite.cs" />
     <Compile Include="Model\BoundingBoxCollider.cs" />
     <Compile Include="Model\CamaraGod.cs" />
-    <Compile Include="Model\CamaraPrimeraPersona.cs" />
     <Compile Include="Model\Checkpoint.cs" />
     <Compile Include="Model\Collider.cs" />
     <Compile Include="Model\Utils\Sprite\CustomBitmap.cs" />

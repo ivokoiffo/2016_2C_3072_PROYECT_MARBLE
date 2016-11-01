@@ -36,6 +36,7 @@ namespace TGC.Group.Model
         private bool flagGod = false;
 		private Matrix cameraRotation;
 		private float leftrightRot;
+        private CamaraGod camaraGod;
 		private float updownRot;
 		public float RotationSpeed { get; set; }
 		private Vector3 viewVector;
@@ -137,7 +138,7 @@ namespace TGC.Group.Model
 
             personaje.AutoTransformEnable = true;
             personaje.Scale = new Vector3(1f, 1f, 1f);
-            personaje.Position = new Vector3(325f,102f, 474f);
+            personaje.Position = new Vector3(325f,79f, 474f);
             personaje.rotateY(Geometry.DegreeToRadian(180f));
             boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter(), personaje.BoundingBox.calculateAxisRadius());
         }
@@ -196,20 +197,15 @@ namespace TGC.Group.Model
 
             Clipboard.Clear();
             //Device de DirectX para crear primitivas.
-            var d3dDevice = D3DDevice.Instance.Device;
-            d3dDevice.ShowCursor(true);
+            this.inicializarCamara();
             //Seteo el personaje
             seteoDePersonaje();
             //Seteo del monsturo
             seteoDelMonstruo();
             //Seteo el escenario
-            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\MPmapa+El1ConArmario-TgcScene.xml");
+            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapa-TgcScene.xml");
 
-            leftrightRot = FastMath.PI_HALF;
-            updownRot = -FastMath.PI / 10.0f;
-            cameraRotation = Matrix.RotationX(updownRot) * Matrix.RotationY(leftrightRot);
-            RotationSpeed = 0.1f;
-            viewVector = new Vector3(1, 0, 0);
+            
 
             meshRecargaLuz = TgcBox.fromSize(new Vector3(10, 10, 10), Color.Red);
             meshRecargaLuz.AutoTransformEnable = true;
@@ -241,9 +237,13 @@ namespace TGC.Group.Model
             //Crear manejador de colisiones
             collisionManager = new ElipsoidCollisionManager();
             collisionManager.GravityEnabled = false;
-
-            luz = new Vela();
             drawer2D = new Drawer2D();
+            inicializarBarra();
+            luz = new Vela();
+        }
+
+        private void inicializarBarra()
+        {
             //Crear Sprite
             barra = new CustomSprite();
             energia = new CustomSprite();
@@ -254,11 +254,22 @@ namespace TGC.Group.Model
             barra.Position = new Vector2(0, 0);
             energia.Bitmap = new CustomBitmap(MediaDir + "\\energia.png", D3DDevice.Instance.Device);
             energia.Scaling = new Vector2(escalaActual, 0.4f);
-            energia.Position = new Vector2(22+barra.Position.X, 16+barra.Position.Y);
+            energia.Position = new Vector2(22 + barra.Position.X, 16 + barra.Position.Y);
+        }
+
+        private void inicializarCamara()
+        {
+            var d3dDevice = D3DDevice.Instance.Device;
+            leftrightRot = FastMath.PI_HALF;
+            updownRot = -FastMath.PI / 10.0f;
+            cameraRotation = Matrix.RotationX(updownRot) * Matrix.RotationY(leftrightRot);
+            Cursor.Position = new Point(D3DDevice.Instance.Device.Viewport.Width / 2,D3DDevice.Instance.Device.Viewport.Height / 2);
+            RotationSpeed = 0.1f;
+            viewVector = new Vector3(1, 0, 0);
         }
 
         private void godMod() {
-            Camara = new CamaraGod(true,personaje.Position,Input);
+            camaraGod = new CamaraGod(true,boundPersonaje.Position,Input);
         }
         //OFFSET PARA PRIMERA PERSONA CON MANOS
         private Vector3 getOffset() {
@@ -309,75 +320,79 @@ namespace TGC.Group.Model
 			puerta.Transform = Matrix.RotationZ(1);
 			puerta.Position = pos;
 		}
-		public void moverPersonaje(){    
-		    var velocidadCaminar = 1.0f;
-            var moveVector = new Vector3(0, 0, 0);
-            //Calcular proxima posicion de personaje segun Input
-            var moving = false;
-
-            if (Input.keyDown(Key.W)){
-                moving = true;
-                moveVector += new Vector3(1, 0, 0) * velocidadCaminar;
-            }
-            //Strafe right
-            if (Input.keyDown(Key.D))
+        public void moverPersonaje()
+        {
+            if (!flagGod)
             {
-                moveVector += new Vector3(0, 0, -1) * velocidadCaminar;
-            }
+                var velocidadCaminar = 1.0f;
+                var moveVector = new Vector3(0, 0, 0);
+                var moving = false;
 
-            //Strafe left
-            if (Input.keyDown(Key.A))
-            {
-                moveVector += new Vector3(0, 0, 1) * velocidadCaminar;
-            }
+                if (Input.keyDown(Key.W))
+                {
+                    moving = true;
+                    moveVector += new Vector3(1, 0, 0) * velocidadCaminar;
+                }
 
-            if (Input.keyDown(Key.S))
-            {
-                moveVector += new Vector3(-1, 0, 0) * velocidadCaminar;
-                moving = true;
+                if (Input.keyDown(Key.D))
+                {
+                    moveVector += new Vector3(0, 0, -1) * velocidadCaminar;
+                }
 
-			}
-            if (moving){
-                //Activar animacion de caminando
-                personaje.playAnimation("Walk", true);
-            }
-            else{
-                personaje.playAnimation("StandBy", true);
-            }
+                if (Input.keyDown(Key.A))
+                {
+                    moveVector += new Vector3(0, 0, 1) * velocidadCaminar;
+                }
 
-            //Vector de movimiento
-            var movementVector = Vector3.Empty;
-			var leftrightRotPrevius= leftrightRot-Input.XposRelative * RotationSpeed;
-			var updownRotPrevius = updownRot + Input.YposRelative * RotationSpeed;
-		    leftrightRot -= Input.XposRelative * RotationSpeed; 
-			personaje.rotateY(Input.XposRelative* RotationSpeed);
+                if (Input.keyDown(Key.S))
+                {
+                    moveVector += new Vector3(-1, 0, 0) * velocidadCaminar;
+                    moving = true;
 
-            //maximos para los giros del vectorDeView
-            if (-1f < updownRotPrevius && updownRotPrevius < 1f) { updownRot += Input.YposRelative * RotationSpeed; }
+                }
+                if (moving)
+                {
+                    //Activar animacion de caminando
+                    personaje.playAnimation("Walk", true);
+                }
+                else
+                {
+                    personaje.playAnimation("StandBy", true);
+                }
 
-				cameraRotation = Matrix.RotationY(-leftrightRot) * Matrix.RotationX(-updownRot); //calcula la rotacion del vector de view
+                //Vector de movimiento
+                var movementVector = Vector3.Empty;
+                var leftrightRotPrevius = leftrightRot - Input.XposRelative * RotationSpeed;
+                var updownRotPrevius = updownRot + Input.YposRelative * RotationSpeed;
+                leftrightRot -= Input.XposRelative * RotationSpeed;
+                personaje.rotateY(Input.XposRelative * RotationSpeed);
 
-				movementVector = Vector3.TransformNormal(moveVector, Matrix.RotationY(-leftrightRot));
+                //maximos para los giros del vectorDeView
+                if (-1f < updownRotPrevius && updownRotPrevius < 1f) { updownRot += Input.YposRelative * RotationSpeed; }
+
+                cameraRotation = Matrix.RotationY(-leftrightRot) * Matrix.RotationX(-updownRot); //calcula la rotacion del vector de view
+
+                movementVector = Vector3.TransformNormal(moveVector, Matrix.RotationY(-leftrightRot));
                 direccionLookAt = Vector3.TransformNormal(viewVector, cameraRotation); //direccion en que se mueve girada respecto la rotacion de la camara
-			if (!flagGod)
-			{
+
                 var realMovement = collisionManager.moveCharacter(boundPersonaje, movementVector, objetosColisionables);
                 personaje.move(realMovement);
                 lookAt = Vector3.Add(getOffset(), direccionLookAt); //vector lookAt final
 
-                Camara.SetCamera(getOffset(),lookAt);
+                Camara.SetCamera(getOffset(), lookAt);
                 collisionManager.SlideFactor = 2;
-				foreach (var puerta in puertas)
-				{
-					animacionDePuerta(puerta);
-				}
+                foreach (var puerta in puertas)
+                {
+                    animacionDePuerta(puerta);
+                }
 
-				if (Input.keyDown(Key.E))
-				{
-					foreach (var armario in armarios)
-					{
-						controlDeArmario(armario);}
-				}
+                if (Input.keyDown(Key.E))
+                {
+                    foreach (var armario in armarios)
+                    {
+                        controlDeArmario(armario);
+                    }
+                }
                 this.getColisionContraObjetoCarga();
                 luz.consumir(ElapsedTime);
             }
@@ -396,22 +411,28 @@ namespace TGC.Group.Model
         {
             PreUpdate();
 
-            moverPersonaje();
+            if (Input.keyPressed(Key.G))
+            {
+                if (!flagGod)
+                {
+                    flagGod = true;
+                    godMod();
+                }
+                else
+                {
+                    flagGod = false;
+                }
+
+            }
+            if (flagGod){PosCamara pos = camaraGod.getPosicionGod(ElapsedTime);
+                Camara.SetCamera(pos.posicion, pos.lookAt);
+            }
+            else { moverPersonaje(); }
+            
             //animacionDePuerta();
             
             //logicaDelMonstruo();
 
-            if (Input.keyPressed(Key.G)){
-                if (!flagGod)
-                {
-                    godMod();
-					flagGod = true;
-                }
-                else {
-                    flagGod = false;
-                }
-		
-            }
 
             if (Input.keyPressed(Key.C))
             {

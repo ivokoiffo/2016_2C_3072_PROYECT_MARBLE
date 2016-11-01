@@ -14,10 +14,14 @@ namespace TGC.Group.Model
     ///     Ref: http://www.riemers.net/eng/Tutorials/XNA/Csharp/Series4/Mouse_camera.php
     ///     Autor: Rodrigo Garcia.
     /// </summary>
-    public class CamaraGod : TgcCamera
+    public class CamaraGod
     {
         private readonly Point mouseCenter; //Centro de mause 2D para ocultarlo.
+        protected readonly Vector3 DEFAULT_UP_VECTOR;
 
+        public Vector3 LookAt { get; }
+        public Vector3 Position { get; }
+        public Vector3 UpVector { get; protected set; }
         //Se mantiene la matriz rotacion para no hacer este calculo cada vez.
         private Matrix cameraRotation;
 
@@ -35,9 +39,7 @@ namespace TGC.Group.Model
         {
             Input = input;
             positionEye = new Vector3();
-            mouseCenter = new Point(
-                D3DDevice.Instance.Device.Viewport.Width / 2,
-                D3DDevice.Instance.Device.Viewport.Height / 2);
+            mouseCenter = new Point(D3DDevice.Instance.Device.Viewport.Width / 2,D3DDevice.Instance.Device.Viewport.Height / 2);
             RotationSpeed = 0.1f;
             MovementSpeed = 500f;
             JumpSpeed = 500f;
@@ -53,7 +55,7 @@ namespace TGC.Group.Model
         }
 
 
-        public CamaraGod(bool lockCam,Vector3 positionEye, TgcD3dInput input) : this(input)
+        public CamaraGod(bool lockCam,Vector3 positionEye, TgcD3dInput input) : this(positionEye,input)
         {
             LockCam = true;
         }
@@ -105,7 +107,7 @@ namespace TGC.Group.Model
             LockCam = false;
         }
 
-        public override void UpdateCamera(float elapsedTime)
+        public PosCamara getPosicionGod(float elapsedTime)
         {
             var moveVector = new Vector3(0, 0, 0);
             //Forward
@@ -168,22 +170,9 @@ namespace TGC.Group.Model
             //Calculamos el target de la camara, segun su direccion inicial y las rotaciones en screen space x,y.
             var cameraRotatedTarget = Vector3.TransformNormal(directionView, cameraRotation);
             var cameraFinalTarget = positionEye + cameraRotatedTarget;
-
-            var cameraOriginalUpVector = DEFAULT_UP_VECTOR;
-            var cameraRotatedUpVector = Vector3.TransformNormal(cameraOriginalUpVector, cameraRotation);
-
-            base.SetCamera(positionEye, cameraFinalTarget, cameraRotatedUpVector);
-        }
-
-        /// <summary>
-        ///     se hace override para actualizar las posiones internas, estas seran utilizadas en el proximo update.
-        /// </summary>
-        /// <param name="position"></param>
-        /// <param name="directionView"> debe ser normalizado.</param>
-        public override void SetCamera(Vector3 position, Vector3 directionView)
-        {
-            positionEye = position;
-            this.directionView = directionView;
+            PosCamara pos = new PosCamara(positionEye, cameraFinalTarget);
+            return pos;
+           
         }
     }
 }
