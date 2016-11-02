@@ -16,6 +16,8 @@ using TGC.Core.SkeletalAnimation;
 using TGC.Group.Model.Utils;
 using System.Windows.Forms;
 using TGC.Core.Collision;
+using TGC.Core.Sound;
+
 namespace TGC.Group.Model
 {
     public class GameModel : TgcExample
@@ -38,13 +40,14 @@ namespace TGC.Group.Model
 		private float leftrightRot;
         private CamaraGod camaraGod;
 		private float updownRot;
-		public float RotationSpeed { get; set; }
+        private TgcMp3Player mp3Player;
+        public float RotationSpeed { get; set; }
 		private Vector3 viewVector;
 		Vector3 lookAt;
         private Vector3 direccionLookAt;
         double rot = 0;
         double variacion;
-
+        private CustomSprite menu;
         private readonly List<Collider> objetosColisionables = new List<Collider>();
 		private readonly List<Collider> armarios = new List<Collider>();
 		private readonly List<TgcMesh> puertas = new List<TgcMesh>();
@@ -54,8 +57,9 @@ namespace TGC.Group.Model
         private Checkpoint ClosestCheckPoint;
         List<TgcArrow> ArrowsClosesCheckPoint;
         private Vector3 objetive;
+        private bool estaEnMenu = true;
 
-		private TgcMesh setMeshToOrigin(TgcMesh mesh)
+        private TgcMesh setMeshToOrigin(TgcMesh mesh)
  		{
  			//Desplazar los vertices del mesh para que tengan el centro del AABB en el origen
  			var center = mesh.BoundingBox.calculateBoxCenter();
@@ -196,7 +200,8 @@ namespace TGC.Group.Model
             System.Threading.Thread.CurrentThread.CurrentCulture = customCulture;
 
             Clipboard.Clear();
-            //Device de DirectX para crear primitivas.
+            
+
             this.inicializarCamara();
             //Seteo el personaje
             seteoDePersonaje();
@@ -204,8 +209,6 @@ namespace TGC.Group.Model
             seteoDelMonstruo();
             //Seteo el escenario
             escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapa-TgcScene.xml");
-
-            
 
             meshRecargaLuz = TgcBox.fromSize(new Vector3(10, 10, 10), Color.Red);
             meshRecargaLuz.AutoTransformEnable = true;
@@ -233,15 +236,23 @@ namespace TGC.Group.Model
 
             CheckpointHelper.BuildCheckpoints();
 
-
             //Crear manejador de colisiones
             collisionManager = new ElipsoidCollisionManager();
             collisionManager.GravityEnabled = false;
             drawer2D = new Drawer2D();
+            this.incializarMenu();
+            mp3Player = new TgcMp3Player();
             inicializarBarra();
             luz = new Vela();
         }
+        private void incializarMenu() {
+            menu = new CustomSprite();
+            menu.Bitmap = new CustomBitmap(MediaDir + "\\menuInicio.png", D3DDevice.Instance.Device);
+            var textureSize = menu.Bitmap.Size;
+            menu.Position = new Vector2(0,0);
+            menu.Scaling = new Vector2((float)D3DDevice.Instance.Width / textureSize.Width, (float)D3DDevice.Instance.Height / textureSize.Height + 0.01f);
 
+        }
         private void inicializarBarra()
         {
             //Crear Sprite
@@ -304,7 +315,6 @@ namespace TGC.Group.Model
 			}
            
            }
-    	   //seteo de velocidades
 		private void controlDeArmario(Collider mesh)
 		{
 			if ((boundPersonaje.Center - mesh.BoundingSphere.Center).Length() < (boundPersonaje.Radius.Length() + mesh.BoundingSphere.Radius))
@@ -326,11 +336,9 @@ namespace TGC.Group.Model
             {
                 var velocidadCaminar = 1.0f;
                 var moveVector = new Vector3(0, 0, 0);
-                var moving = false;
 
                 if (Input.keyDown(Key.W))
                 {
-                    moving = true;
                     moveVector += new Vector3(1, 0, 0) * velocidadCaminar;
                 }
 
@@ -347,17 +355,6 @@ namespace TGC.Group.Model
                 if (Input.keyDown(Key.S))
                 {
                     moveVector += new Vector3(-1, 0, 0) * velocidadCaminar;
-                    moving = true;
-
-                }
-                if (moving)
-                {
-                    //Activar animacion de caminando
-                    personaje.playAnimation("Walk", true);
-                }
-                else
-                {
-                    personaje.playAnimation("StandBy", true);
                 }
 
                 //Vector de movimiento
@@ -410,36 +407,46 @@ namespace TGC.Group.Model
         public override void Update()
         {
             PreUpdate();
-
-            if (Input.keyPressed(Key.G))
+            if (!estaEnMenu)
             {
-                if (!flagGod)
+                if (Input.keyPressed(Key.G))
                 {
-                    flagGod = true;
-                    godMod();
+                    if (!flagGod)
+                    {
+                        flagGod = true;
+                        godMod();
+                    }
+                    else
+                    {
+                        flagGod = false;
+                    }
+
                 }
-                else
+                if (flagGod)
                 {
-                    flagGod = false;
+                    PosCamara pos = camaraGod.getPosicionGod(ElapsedTime);
+                    Camara.SetCamera(pos.posicion, pos.lookAt);
                 }
+                else { moverPersonaje(); }
 
+                //animacionDePuerta();
+
+                //logicaDelMonstruo();
+
+
+                if (Input.keyPressed(Key.C))
+                {
+                    Clipboard.SetText(Clipboard.GetText() + String.Format(" checkpoints.Add(new Checkpoint(new Vector3({0}f, {1}f, {2}f) + origenMapa)); \n", Camara.Position.X - CheckpointHelper.origenMapa.X, 150 - CheckpointHelper.origenMapa.Y, Camara.Position.Z - CheckpointHelper.origenMapa.Z));
+                    CheckpointHelper.checkpoints.Add(new Checkpoint(new Vector3(Camara.Position.X, 150, Camara.Position.Z)));
+                }
+                actualizarEnergia();
             }
-            if (flagGod){PosCamara pos = camaraGod.getPosicionGod(ElapsedTime);
-                Camara.SetCamera(pos.posicion, pos.lookAt);
-            }
-            else { moverPersonaje(); }
-            
-            //animacionDePuerta();
-            
-            //logicaDelMonstruo();
-
-
-            if (Input.keyPressed(Key.C))
+            if(estaEnMenu && Input.keyPressed(Key.Space))
             {
-                Clipboard.SetText(Clipboard.GetText() + String.Format(" checkpoints.Add(new Checkpoint(new Vector3({0}f, {1}f, {2}f) + origenMapa)); \n", Camara.Position.X - CheckpointHelper.origenMapa.X, 150 - CheckpointHelper.origenMapa.Y, Camara.Position.Z - CheckpointHelper.origenMapa.Z));
-                CheckpointHelper.checkpoints.Add(new Checkpoint(new Vector3(Camara.Position.X, 150, Camara.Position.Z)));
+                estaEnMenu = false;
+                mp3Player.stop();
+                mp3Player.closeFile();
             }
-            actualizarEnergia();
         }
 
         private void actualizarEnergia()
@@ -447,6 +454,7 @@ namespace TGC.Group.Model
             escalaActual = luz.getConversionEnergiaABarra();
             energia.Scaling = new Vector2(escalaActual, 0.4f);
         }
+
 
         private void renderPuerta() {
             unMesh.render();
@@ -458,52 +466,68 @@ namespace TGC.Group.Model
             //Inicio el render de la escena, para ejemplos simples. Cuando tenemos postprocesado o shaders es mejor realizar las operaciones según nuestra conveniencia.
 
             PreRender();
-            
-            DrawText.drawText("[G]-Habilita GodMod ",0,20, Color.OrangeRed);
-            DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(getOffset()), 0, 30,Color.OrangeRed);
-            DrawText.drawText("armarios: " + armarios.Count.ToString(), 0, 50, Color.OrangeRed);
-			DrawText.drawText("puertas " + puertas.Count.ToString(), 0, 70, Color.OrangeRed);
-            DrawText.drawText(luz.getNombreYEnergia(), 0, 90, Color.OrangeRed);
-            drawer2D.BeginDrawSprite();
+            if (estaEnMenu)
+            {
+                drawer2D.BeginDrawSprite();
+                drawer2D.DrawSprite(menu);
+                drawer2D.EndDrawSprite();
+                mp3Player.FileName = MediaDir + "st.mp3";
+                if (mp3Player.getStatus() == TgcMp3Player.States.Open)
+                {
+                    //Reproducir MP3
+                    mp3Player.play(true);
+                }
+            }
+            else
+            {
+                DrawText.drawText("[G]-Habilita GodMod ", 0, 20, Color.OrangeRed);
+                DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(getOffset()), 0, 30, Color.OrangeRed);
+                DrawText.drawText("armarios: " + armarios.Count.ToString(), 0, 50, Color.OrangeRed);
+                DrawText.drawText("puertas " + puertas.Count.ToString(), 0, 70, Color.OrangeRed);
+                DrawText.drawText(luz.getNombreYEnergia(), 0, 90, Color.OrangeRed);
+                drawer2D.BeginDrawSprite();
 
-            //Dibujar sprite (si hubiese mas, deberian ir todos aquí)
-            drawer2D.DrawSprite(barra);
-            drawer2D.DrawSprite(energia);
-            //drawer2D.DrawLine(new Vector2(0,30), new Vector2(40,30), Color.Red, 40, false);
-            //Finalizar el dibujado de Sprites
-            drawer2D.EndDrawSprite();
-            #region ComentoCheckPoint
-            //Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
+                //Dibujar sprite (si hubiese mas, deberian ir todos aquí)
+                drawer2D.DrawSprite(barra);
+                drawer2D.DrawSprite(energia);
+                //drawer2D.DrawLine(new Vector2(0,30), new Vector2(40,30), Color.Red, 40, false);
+                //Finalizar el dibujado de Sprites
+                drawer2D.EndDrawSprite();
+                #region ComentoCheckPoint
+                //Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
 
-            //DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
-            //ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
-            //ArrowsClosesCheckPoint.ForEach(a => a.render());
-            //monstruo.animateAndRender(ElapsedTime);
-            //CheckpointHelper.renderAll();
-            #endregion
-            //renderPuerta();
-            //personaje.animateAndRender(ElapsedTime);
-            personaje.BoundingBox.render();
-            meshRecargaLuz.render();
-			
-			foreach (var mesh in escenario.Meshes)
-			{
-				//Nos ocupamos solo de las mallas habilitadas
-				if (mesh.Enabled)
-				{
-					//Solo mostrar la malla si colisiona contra el Frustum
-					var r = TgcCollisionUtils.classifyFrustumAABB(Frustum, mesh.BoundingBox);
-					if (r != TgcCollisionUtils.FrustumResult.OUTSIDE)
-					{
-                        if (flagGod) { luz.deshabilitarEfecto(mesh); } else {
-                            luz.aplicarEfecto(mesh, getOffset(), direccionLookAt); }
-						mesh.render();
+                //DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
+                //ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
+                //ArrowsClosesCheckPoint.ForEach(a => a.render());
+                //monstruo.animateAndRender(ElapsedTime);
+                //CheckpointHelper.renderAll();
+                #endregion
+                //renderPuerta();
+                //personaje.animateAndRender(ElapsedTime);
+                personaje.BoundingBox.render();
+                meshRecargaLuz.render();
 
+                foreach (var mesh in escenario.Meshes)
+                {
+                    //Nos ocupamos solo de las mallas habilitadas
+                    if (mesh.Enabled)
+                    {
+                        //Solo mostrar la malla si colisiona contra el Frustum
+                        var r = TgcCollisionUtils.classifyFrustumAABB(Frustum, mesh.BoundingBox);
+                        if (r != TgcCollisionUtils.FrustumResult.OUTSIDE)
+                        {
+                            if (flagGod) { luz.deshabilitarEfecto(mesh); }
+                            else
+                            {
+                                luz.aplicarEfecto(mesh, getOffset(), direccionLookAt);
+                            }
+                            mesh.render();
+
+                        }
                     }
-				}
-			}
-            //Deshabilitar para que no dibuje los checkpoints en el mapa
-            
+                }
+                //Deshabilitar para que no dibuje los checkpoints en el mapa
+            }
             //Finaliza el render y presenta en pantalla, al igual que el preRender se debe para casos puntuales es mejor utilizar a mano las operaciones de EndScene y PresentScene
             PostRender();
         }
