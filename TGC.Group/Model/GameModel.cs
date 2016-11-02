@@ -41,6 +41,8 @@ namespace TGC.Group.Model
         private CamaraGod camaraGod;
 		private float updownRot;
         private TgcMp3Player mp3Player;
+        private string currentFile;
+        private TgcStaticSound sound;
         public float RotationSpeed { get; set; }
 		private Vector3 viewVector;
 		Vector3 lookAt;
@@ -330,33 +332,59 @@ namespace TGC.Group.Model
 			puerta.Transform = Matrix.RotationZ(1);
 			puerta.Position = pos;
 		}
+        private void cargarSonido(string filePath)
+        {
+            filePath = MediaDir + filePath;
+            if (currentFile == null || currentFile != filePath)
+            {
+                currentFile = filePath;
+
+                //Borrar sonido anterior
+                if (sound != null)
+                {
+                    sound.dispose();
+                    sound = null;
+                }
+
+                //Cargar sonido
+                sound = new TgcStaticSound();
+                sound.loadSound(currentFile, DirectSound.DsDevice);
+            }
+        }
         public void moverPersonaje()
         {
             if (!flagGod)
             {
                 var velocidadCaminar = 1.0f;
                 var moveVector = new Vector3(0, 0, 0);
-
+                var moving = false;
                 if (Input.keyDown(Key.W))
                 {
+                    moving = true;
                     moveVector += new Vector3(1, 0, 0) * velocidadCaminar;
                 }
 
                 if (Input.keyDown(Key.D))
                 {
+                    moving = true;
                     moveVector += new Vector3(0, 0, -1) * velocidadCaminar;
                 }
 
                 if (Input.keyDown(Key.A))
                 {
+                    moving = true;
                     moveVector += new Vector3(0, 0, 1) * velocidadCaminar;
                 }
 
                 if (Input.keyDown(Key.S))
                 {
+                    moving = true;
                     moveVector += new Vector3(-1, 0, 0) * velocidadCaminar;
                 }
-
+                if (moving)
+                {
+                    sound.play(false);
+                }
                 //Vector de movimiento
                 var movementVector = Vector3.Empty;
                 var leftrightRotPrevius = leftrightRot - Input.XposRelative * RotationSpeed;
@@ -444,8 +472,7 @@ namespace TGC.Group.Model
             if(estaEnMenu && Input.keyPressed(Key.Space))
             {
                 estaEnMenu = false;
-                mp3Player.stop();
-                mp3Player.closeFile();
+                cargarSonido("pisada.wav");
             }
         }
 
@@ -455,7 +482,15 @@ namespace TGC.Group.Model
             energia.Scaling = new Vector2(escalaActual, 0.4f);
         }
 
+        private void reproducirSonido(string nombre) {
+            mp3Player.FileName = MediaDir + nombre;
+            if (mp3Player.getStatus() == TgcMp3Player.States.Open)
+            {
+                //Reproducir MP3
+                mp3Player.play(true);
+            }
 
+        }
         private void renderPuerta() {
             unMesh.render();
             unMesh.BoundingBox.render();
@@ -471,12 +506,7 @@ namespace TGC.Group.Model
                 drawer2D.BeginDrawSprite();
                 drawer2D.DrawSprite(menu);
                 drawer2D.EndDrawSprite();
-                mp3Player.FileName = MediaDir + "st.mp3";
-                if (mp3Player.getStatus() == TgcMp3Player.States.Open)
-                {
-                    //Reproducir MP3
-                    mp3Player.play(true);
-                }
+                reproducirSonido("st.mp3");
             }
             else
             {
@@ -535,8 +565,11 @@ namespace TGC.Group.Model
         public override void Dispose()
         {
             escenario.disposeAll();
-            personaje.Attachments.Clear();
             personaje.dispose();
+            boundPersonaje.dispose();
+            boundMonstruo.dispose();
+            sound.dispose();
+
         }
 
         public void logicaDelMonstruo()
