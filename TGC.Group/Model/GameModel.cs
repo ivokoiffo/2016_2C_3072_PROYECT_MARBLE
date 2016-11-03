@@ -475,7 +475,7 @@ namespace TGC.Group.Model
 
             monstruo.move(dir * 0.7f);
 
-            monstruo.playAnimation("Caminando", true);
+            monstruo.playAnimation("Caminando", true);  
 
         }
     }
