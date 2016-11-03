@@ -6,7 +6,6 @@ HAY QUE LOGRAR QUE LA CAMARA SIEMPRE SIGA A LAS MANOS DEL TIPO, LO QUE HAY QUE H
 Puntos obligatorios faltantes: 
 * No se vieron enemigo ni puertas (controles muy difíciles de usar) 
 * Iluminación no es buena, falta vela y farol. 
-* No hay HUD (verifiquen elementos obligatorios para todos los trabajos) 
 
 Comentarios: 
 * Mejorar la forma de esconderse, utilizar textura trasparente o stencil. 

@@ -53,6 +53,7 @@
     <StartupObject>TGC.Group.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.DirectX.DirectSound, Version=1.0.2902.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
     <Reference Include="Microsoft.VisualC" />
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
@@ -86,16 +87,22 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Game.settings</DependentUpon>
     </Compile>
+    <Compile Include="Model\Luces\Faro.cs" />
+    <Compile Include="Model\Utils\PosCamara.cs" />
+    <Compile Include="Model\Utils\Sprite\AnimatedSprite.cs" />
     <Compile Include="Model\BoundingBoxCollider.cs" />
     <Compile Include="Model\CamaraGod.cs" />
-    <Compile Include="Model\CamaraPrimeraPersona.cs" />
     <Compile Include="Model\Checkpoint.cs" />
     <Compile Include="Model\Collider.cs" />
+    <Compile Include="Model\Utils\Sprite\CustomBitmap.cs" />
+    <Compile Include="Model\Utils\Sprite\CustomSprite.cs" />
+    <Compile Include="Model\Utils\Sprite\Drawer2D.cs" />
     <Compile Include="Model\ElipsoidCollisionManager.cs" />
     <Compile Include="Model\GameModel.cs" />
-    <Compile Include="Model\Linterna.cs" />
-    <Compile Include="Model\Luz.cs" />
+    <Compile Include="Model\Luces\Linterna.cs" />
+    <Compile Include="Model\Luces\Luz.cs" />
     <Compile Include="Model\Utils\CollisionManager.cs" />
+    <Compile Include="Model\Luces\Vela.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Form\GameForm.resx">
