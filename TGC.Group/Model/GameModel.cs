@@ -32,6 +32,7 @@ namespace TGC.Group.Model
         private TgcBox meshRecargaLuz;
         private CustomSprite barra;
         private float escalaActual=0.45f;
+		private bool escondido;
         private CustomSprite energia;
         private Drawer2D drawer2D;
         private List<BoundingBoxCollider> objetosRecarga = new List<BoundingBoxCollider>();
@@ -53,10 +54,15 @@ namespace TGC.Group.Model
         private Vector3 direccionLookAt;
         double rot = 0;
         double variacion;
+		float angInicial = 0f;
+		float angFinal = 80f;
+		float delta = 0.4f;
+		double angIntermedio;
         private CustomSprite menu;
         private readonly List<Collider> objetosColisionables = new List<Collider>();
 		private readonly List<Collider> armarios = new List<Collider>();
 		private readonly List<TgcMesh> puertas = new List<TgcMesh>();
+
         private ElipsoidCollisionManager collisionManager;
         float larg = 4;
         private Vector3 vectorOffset = new Vector3(0, 30, 0);
@@ -148,29 +154,37 @@ namespace TGC.Group.Model
 
             personaje.AutoTransformEnable = true;
             personaje.Scale = new Vector3(1f, 1f, 1f);
-            personaje.Position = new Vector3(198.346f, 79f, 1701f);
+            personaje.Position = new Vector3(1269f,79f, -354f);
             personaje.rotateY(Geometry.DegreeToRadian(180f));
             boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter(), personaje.BoundingBox.calculateAxisRadius());
         }
         private void seteoDelMonstruo()
         {
             //Paths para archivo XML de la malla
-            var pathMesh = MediaDir + "SkeletalAnimations\\BasicHuman\\Quake2Scout-TgcSkeletalMesh.xml";
+            var pathMesh = MediaDir + "SkeletalAnimations\\Robot\\Robot-TgcSkeletalMesh.xml";
 
             //Path para carpeta de texturas de la malla
-            var mediaPath = MediaDir + "SkeletalAnimations\\BasicHuman\\";
+            var mediaPath = MediaDir + "SkeletalAnimations\\Robot\\";
 
             //Lista de animaciones disponibles
             string[] animationList =
             {
-                "Walk"
+                "Parado",
+                "Caminando",
+                "Correr",
+                "PasoDerecho",
+                "PasoIzquierdo",
+                "Empujar",
+                "Patear",
+                "Pegar",
+                "Arrojar"
             };
 
             //Crear rutas con cada animacion
             var animationsPath = new string[animationList.Length];
             for (var i = 0; i < animationList.Length; i++)
             {
-                animationsPath[i] = mediaPath +"\\Animations\\" + animationList[i] + "-TgcSkeletalAnim.xml";
+                animationsPath[i] = mediaPath + animationList[i] + "-TgcSkeletalAnim.xml";
             }
 
             //Cargar mesh y animaciones
@@ -198,8 +212,8 @@ namespace TGC.Group.Model
             System.Threading.Thread.CurrentThread.CurrentCulture = customCulture;
 
             Clipboard.Clear();
-            
 
+			escondido = false;
             this.inicializarCamara();
             //Seteo el personaje
             seteoDePersonaje();
@@ -207,7 +221,6 @@ namespace TGC.Group.Model
             seteoDelMonstruo();
             //Seteo el escenario
             escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapaProjectMarble-TgcScene.xml");
-
 
             meshRecargaLuz = TgcBox.fromSize(new Vector3(10, 10, 10), Color.Red);
             meshRecargaLuz.AutoTransformEnable = true;
@@ -336,11 +349,22 @@ namespace TGC.Group.Model
 			}
 		}
 
-		public void rotarPuerta(TgcMesh puerta) {
-			Vector3 pos = puerta.Position;
-			puerta.Position = new Vector3(0, 0, 0);
-			puerta.Transform = Matrix.RotationZ(1);
-			puerta.Position = pos;
+		public void rotarPuerta(TgcMesh puerta)
+		{
+			Vector3 posicionVieja = puerta.Position;
+			puerta.Position = new Vector3(puerta.Position.X, 0, puerta.Position.Z);
+			float angIntermedio=angInicial * (1.0f - delta) + angFinal * delta;
+			puerta.rotateY(angIntermedio);
+			puerta.Position = posicionVieja;
+
+		}
+		private void controlDePuerta(TgcMesh mesh)
+		{
+			if ((boundPersonaje.Center - mesh.Position).Length() < (boundPersonaje.Radius.Length() + larg))
+			{
+
+				rotarPuerta(mesh);
+			}
 		}
         private void cargarSonido(string filePath)
         {
@@ -363,9 +387,9 @@ namespace TGC.Group.Model
         }
         public void moverPersonaje()
         {
-            if (!flagGod)
+			if (!flagGod && !escondido)
             {
-                var velocidadCaminar = 1.0f;
+                var velocidadCaminar = 1.0f; 
                 var moveVector = new Vector3(0, 0, 0);
                 var moving = false;
                 if (Input.keyDown(Key.W))
@@ -427,7 +451,12 @@ namespace TGC.Group.Model
                     {
                         controlDeArmario(armario);
                     }
+					if (escondido) { escondido = false; }
+					else { escondido = false; };
                 }
+				foreach (var puerta in puertas) {
+					controlDePuerta(puerta);
+				}
                 this.getColisionContraObjetoCarga();
                 luz.consumir(ElapsedTime);
             }
@@ -525,11 +554,6 @@ namespace TGC.Group.Model
             }
 
         }
-        private void renderPuerta() {
-            unMesh.render();
-            unMesh.BoundingBox.render();
-            DrawText.drawText(unMesh.Position.ToString(), 0, 50, Color.Red);
-        }
         public override void Render()
         {
             //Inicio el render de la escena, para ejemplos simples. Cuando tenemos postprocesado o shaders es mejor realizar las operaciones según nuestra conveniencia.
@@ -544,10 +568,10 @@ namespace TGC.Group.Model
             }
             else
             {
-                DrawText.drawText("[G]-Habilita GodMod ", 0, 20, Color.OrangeRed);
-                DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(getOffset()), 0, 30, Color.OrangeRed);
-                DrawText.drawText("armarios: " + armarios.Count.ToString(), 0, 50, Color.OrangeRed);
-                DrawText.drawText("puertas " + puertas.Count.ToString(), 0, 70, Color.OrangeRed);
+              //  DrawText.drawText("[G]-Habilita GodMod ", 0, 20, Color.OrangeRed);
+            //    DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(getOffset()), 0, 30, Color.OrangeRed);
+              //  DrawText.drawText("armarios: " + armarios.Count.ToString(), 0, 50, Color.OrangeRed);
+               // DrawText.drawText("puertas " + puertas.Count.ToString(), 0, 70, Color.OrangeRed);
                 DrawText.drawText(luz.getNombreYEnergia(), 0, 90, Color.OrangeRed);
                 drawer2D.BeginDrawSprite();
 
@@ -560,16 +584,15 @@ namespace TGC.Group.Model
                 #region ComentoCheckPoint
                 Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
 
-                DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
-                ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
-                ArrowsClosesCheckPoint.ForEach(a => a.render());
+               // DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
+                //ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
+              //  ArrowsClosesCheckPoint.ForEach(a => a.render());
                 monstruo.animateAndRender(ElapsedTime);
                 CheckpointHelper.renderAll();
                 #endregion
                 //renderPuerta();
                 //personaje.animateAndRender(ElapsedTime);
-                personaje.BoundingBox.render();
-                meshRecargaLuz.render();
+                 meshRecargaLuz.render();
                 foreach (var mesh in meshEscenario)
                 {
                     //Nos ocupamos solo de las mallas habilitadas
@@ -627,7 +650,7 @@ namespace TGC.Group.Model
 
             monstruo.move(dir * 0.7f);
 
-            monstruo.playAnimation("Walk", true);  
+            monstruo.playAnimation("Caminando", true);  
 
         }
     }
