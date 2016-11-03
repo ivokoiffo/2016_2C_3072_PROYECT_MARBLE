@@ -148,37 +148,29 @@ namespace TGC.Group.Model
 
             personaje.AutoTransformEnable = true;
             personaje.Scale = new Vector3(1f, 1f, 1f);
-            personaje.Position = new Vector3(1269f,79f, -354f);
+            personaje.Position = new Vector3(198.346f, 79f, 1701f);
             personaje.rotateY(Geometry.DegreeToRadian(180f));
             boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter(), personaje.BoundingBox.calculateAxisRadius());
         }
         private void seteoDelMonstruo()
         {
             //Paths para archivo XML de la malla
-            var pathMesh = MediaDir + "SkeletalAnimations\\Robot\\Robot-TgcSkeletalMesh.xml";
+            var pathMesh = MediaDir + "SkeletalAnimations\\BasicHuman\\Quake2Scout-TgcSkeletalMesh.xml";
 
             //Path para carpeta de texturas de la malla
-            var mediaPath = MediaDir + "SkeletalAnimations\\Robot\\";
+            var mediaPath = MediaDir + "SkeletalAnimations\\BasicHuman\\";
 
             //Lista de animaciones disponibles
             string[] animationList =
             {
-                "Parado",
-                "Caminando",
-                "Correr",
-                "PasoDerecho",
-                "PasoIzquierdo",
-                "Empujar",
-                "Patear",
-                "Pegar",
-                "Arrojar"
+                "Walk"
             };
 
             //Crear rutas con cada animacion
             var animationsPath = new string[animationList.Length];
             for (var i = 0; i < animationList.Length; i++)
             {
-                animationsPath[i] = mediaPath + animationList[i] + "-TgcSkeletalAnim.xml";
+                animationsPath[i] = mediaPath +"\\Animations\\" + animationList[i] + "-TgcSkeletalAnim.xml";
             }
 
             //Cargar mesh y animaciones
@@ -215,6 +207,7 @@ namespace TGC.Group.Model
             seteoDelMonstruo();
             //Seteo el escenario
             escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapaProjectMarble-TgcScene.xml");
+
 
             meshRecargaLuz = TgcBox.fromSize(new Vector3(10, 10, 10), Color.Red);
             meshRecargaLuz.AutoTransformEnable = true;
@@ -634,7 +627,7 @@ namespace TGC.Group.Model
 
             monstruo.move(dir * 0.7f);
 
-            monstruo.playAnimation("Caminando", true);  
+            monstruo.playAnimation("Walk", true);  
 
         }
     }
