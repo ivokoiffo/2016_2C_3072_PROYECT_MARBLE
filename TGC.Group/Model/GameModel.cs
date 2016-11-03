@@ -17,6 +17,7 @@ using TGC.Group.Model.Utils;
 using System.Windows.Forms;
 using TGC.Core.Collision;
 using TGC.Core.Sound;
+using System.Text.RegularExpressions;
 
 namespace TGC.Group.Model
 {
@@ -33,7 +34,10 @@ namespace TGC.Group.Model
         private float escalaActual=0.45f;
         private CustomSprite energia;
         private Drawer2D drawer2D;
-        private List<TgcBox> objetosRecarga = new List<TgcBox>();
+        private List<BoundingBoxCollider> objetosRecarga = new List<BoundingBoxCollider>();
+        private List<TgcMesh> meshEscenario = new List<TgcMesh>();
+        private List<TgcMesh> meshRecarga = new List<TgcMesh>();
+
         private Luz luz;
         private bool flagGod = false;
 		private Matrix cameraRotation;
@@ -210,30 +214,43 @@ namespace TGC.Group.Model
             //Seteo del monsturo
             seteoDelMonstruo();
             //Seteo el escenario
-            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapa-TgcScene.xml");
+            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapaN-TgcScene.xml");
 
             meshRecargaLuz = TgcBox.fromSize(new Vector3(10, 10, 10), Color.Red);
             meshRecargaLuz.AutoTransformEnable = true;
             meshRecargaLuz.Position = new Vector3(513.33f, 120.7675f, 595.4409f);
-            objetosRecarga.Add(meshRecargaLuz);
+
             //initPuertaGiratoria();   
             //Almacenar volumenes de colision del escenario
             objetosColisionables.Clear();
             CollisionManager.obstaculos = new List<BoundingBoxCollider>();
             foreach (var mesh in escenario.Meshes)
             {
-                if (mesh.Name.Contains("Puerta"))
-                {
-                    mesh.AutoTransformEnable = true;
-                    puertas.Add(mesh);
 
-                }
-                if (mesh.Name.Contains("Placard") || mesh.Name.Contains("Locker"))
+                if (mesh.Name.Contains("Recarga"))
                 {
-                    armarios.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
+                    BoundingBoxCollider recarga = BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox);
+                    string[] nombre = Regex.Split(mesh.Name,"-");
+                    recarga.nombre = nombre[1];
+                    recarga.mesh = mesh;
+                    objetosRecarga.Add(recarga);
                 }
-                objetosColisionables.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
-                CollisionManager.obstaculos.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
+                else
+                {
+                    if (mesh.Name.Contains("Puerta"))
+                    {
+                        mesh.AutoTransformEnable = true;
+                        puertas.Add(mesh);
+
+                    }
+                    if (mesh.Name.Contains("Placard") || mesh.Name.Contains("Locker"))
+                    {
+                        armarios.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
+                    }
+                    objetosColisionables.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
+                    CollisionManager.obstaculos.Add(BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox));
+                }
+                meshEscenario.Add(mesh);
             }
 
             CheckpointHelper.BuildCheckpoints();
@@ -245,7 +262,7 @@ namespace TGC.Group.Model
             this.incializarMenu();
             mp3Player = new TgcMp3Player();
             inicializarBarra();
-            luz = new Vela();
+            luz = new Linterna();
         }
         private void incializarMenu() {
             menu = new CustomSprite();
@@ -425,12 +442,36 @@ namespace TGC.Group.Model
 
         private void getColisionContraObjetoCarga()
         {
-            if ((boundPersonaje.Center - meshRecargaLuz.BoundingBox.calculateBoxCenter()).Length() < (boundPersonaje.Radius.Length() + meshRecargaLuz.BoundingBox.calculateBoxRadius()))
-            {
-                luz.tiempoAcumulado = 0;
-                luz.setMaximaEnergia();
+            BoundingBoxCollider re = new BoundingBoxCollider();
+            foreach (BoundingBoxCollider recarga in objetosRecarga) {
+                if ((boundPersonaje.Center - recarga.BoundingSphere.Center).Length() < (boundPersonaje.Radius.Length() + recarga.BoundingSphere.Radius))
+                {
+                    re = recarga;
+                    if (recarga.nombre == luz.descripcion())
+                    {
+                        luz.tiempoAcumulado = 0;
+                        luz.setMaximaEnergia();
+                        
+                    } else {
+                        switch (recarga.nombre)
+                        {
+                            case "Vela":
+                                luz = new Vela();
+                            break;
+                            case "Linterna":
+                                luz = new Linterna();
+                            break;
+                            case "Faro":
+                                luz = new Faro();
+                            break;
+                        }
+                    }
+                    meshEscenario.Remove(recarga.mesh);
+                }
             }
+            objetosRecarga.Remove(re);
         }
+
 
         public override void Update()
         {
@@ -536,8 +577,7 @@ namespace TGC.Group.Model
                 //personaje.animateAndRender(ElapsedTime);
                 personaje.BoundingBox.render();
                 meshRecargaLuz.render();
-
-                foreach (var mesh in escenario.Meshes)
+                foreach (var mesh in meshEscenario)
                 {
                     //Nos ocupamos solo de las mallas habilitadas
                     if (mesh.Enabled)

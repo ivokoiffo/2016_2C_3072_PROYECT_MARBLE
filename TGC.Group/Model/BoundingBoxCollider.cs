@@ -2,6 +2,7 @@
 using TGC.Core.BoundingVolumes;
 using TGC.Core.Collision;
 using TGC.Core.Geometry;
+using TGC.Core.SceneLoader;
 using TGC.Core.Utils;
 
 namespace TGC.Group.Model
@@ -12,7 +13,8 @@ namespace TGC.Group.Model
     public class BoundingBoxCollider : Collider
     {
         private readonly TgcBoundingAxisAlignBox eAABB;
-
+        public string nombre;
+        public TgcMesh mesh;
         public BoundingBoxCollider()
         {
             eAABB = new TgcBoundingAxisAlignBox();

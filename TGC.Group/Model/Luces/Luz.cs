@@ -22,7 +22,8 @@ namespace TGC.Group.Model
         public float duracionInicial;
         public float Energia { get; set; }
         public float Nombre { get;}
-        public float VelocidadConsumo { get; set; } 
+        public float VelocidadConsumo { get; set; }
+        abstract public string descripcion();
         abstract public void aplicarEfecto(TgcMesh mesh,Vector3 posicionCamara, Vector3 direccionLuz);
         public void deshabilitarEfecto(TgcMesh mesh) {
             mesh.Effect = TgcShaders.Instance.TgcMeshShader;

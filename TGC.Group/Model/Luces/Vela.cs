@@ -60,5 +60,10 @@ namespace TGC.Group.Model
         {
             Energia = 0.45f;
         }
+
+        public override string descripcion()
+        {
+            return "Vela";
+        }
     }
 }

@@ -59,5 +59,10 @@ namespace TGC.Group.Model
         {
             Energia = 100;
         }
+
+        public override string descripcion()
+        {
+            return "Linterna";
+        }
     }
 }
