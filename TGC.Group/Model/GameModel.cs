@@ -144,7 +144,7 @@ namespace TGC.Group.Model
 
             personaje.AutoTransformEnable = true;
             personaje.Scale = new Vector3(1f, 1f, 1f);
-            personaje.Position = new Vector3(325f,79f, 474f);
+            personaje.Position = new Vector3(1269f,79f, -354f);
             personaje.rotateY(Geometry.DegreeToRadian(180f));
             boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter(), personaje.BoundingBox.calculateAxisRadius());
         }
@@ -183,7 +183,7 @@ namespace TGC.Group.Model
 
             monstruo.AutoTransformEnable = true;
             //Escalarlo porque es muy grande
-            monstruo.Position = new Vector3(325, 120, 474);
+            monstruo.Position = new Vector3(1208, 80, 518);
             //Escalamos el personaje 
             monstruo.Scale = new Vector3(0.65f, 0.65f, 0.65f);
 
@@ -210,7 +210,7 @@ namespace TGC.Group.Model
             //Seteo del monsturo
             seteoDelMonstruo();
             //Seteo el escenario
-            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapa-TgcScene.xml");
+            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapaProjectMarble-TgcScene.xml");
 
             meshRecargaLuz = TgcBox.fromSize(new Vector3(10, 10, 10), Color.Red);
             meshRecargaLuz.AutoTransformEnable = true;
@@ -459,7 +459,7 @@ namespace TGC.Group.Model
 
                 //animacionDePuerta();
 
-                //logicaDelMonstruo();
+                logicaDelMonstruo();
 
 
                 if (Input.keyPressed(Key.C))
@@ -524,13 +524,13 @@ namespace TGC.Group.Model
                 //Finalizar el dibujado de Sprites
                 drawer2D.EndDrawSprite();
                 #region ComentoCheckPoint
-                //Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
+                Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
 
-                //DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
-                //ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
-                //ArrowsClosesCheckPoint.ForEach(a => a.render());
-                //monstruo.animateAndRender(ElapsedTime);
-                //CheckpointHelper.renderAll();
+                DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
+                ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
+                ArrowsClosesCheckPoint.ForEach(a => a.render());
+                monstruo.animateAndRender(ElapsedTime);
+                CheckpointHelper.renderAll();
                 #endregion
                 //renderPuerta();
                 //personaje.animateAndRender(ElapsedTime);
