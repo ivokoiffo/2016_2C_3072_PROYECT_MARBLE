@@ -23,6 +23,7 @@ namespace TGC.Group.Model
 {
     public class GameModel : TgcExample
 	{
+        #region inicializar
         private TgcScene escenario;
         private TgcSkeletalMesh personaje;
         private TgcBoundingElipsoid boundPersonaje;
@@ -137,7 +138,7 @@ namespace TGC.Group.Model
 
         //Boleano para ver si dibujamos el boundingbox
         private bool BoundingBox { get; set; }
-
+        #endregion
         private void seteoDePersonaje() {
             //Cargar personaje con animaciones
             var skeletalLoader = new TgcSkeletalLoader();
