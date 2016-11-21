@@ -1,7 +1,5 @@
 CORRECCIONES
 
-EN ALGUNOS CASOS CUANDO EL TIPO ESTA EN LA PARED, moves el mouse y la camara ve para afuera del mapa "lo azul"
-HAY QUE LOGRAR QUE LA CAMARA SIEMPRE SIGA A LAS MANOS DEL TIPO, LO QUE HAY QUE HACER ES TOCAR vectorOffset PARA QUE SIGA BIEN
 
 Puntos obligatorios faltantes: 
 * No se vieron enemigo ni puertas (controles muy difíciles de usar) 
@@ -11,9 +9,6 @@ Comentarios:
 * Mejorar la forma de esconderse, utilizar textura trasparente o stencil. 
 * Faltan objetos e ambientación 
 * Cambiar texturas. En paredes para que parezcan diferentes habitaciones. 
-
-HAY QUE HACER UNA PRESENTACION, MENU PARA CONFIGURAR, JUEGO Y FINAL
-
 
 ● Funcionalidades obligatorias para 1ra entrega:
 

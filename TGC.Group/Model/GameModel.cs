@@ -29,7 +29,6 @@ namespace TGC.Group.Model
         private TgcBoundingElipsoid boundMonstruo;
         private TgcSkeletalMesh monstruo;
         private TgcMesh unMesh;
-        private TgcBox meshRecargaLuz;
         private CustomSprite barra;
         private float escalaActual=0.45f;
 		private bool escondido;
@@ -144,12 +143,11 @@ namespace TGC.Group.Model
             var skeletalLoader = new TgcSkeletalLoader();
             personaje =
                 skeletalLoader.loadMeshAndAnimationsFromFile(
-                    MediaDir + "SkeletalAnimations\\BasicHuman\\BasicHuman-TgcSkeletalMesh.xml",
+                    MediaDir + "SkeletalAnimations\\Personaje\\personaje-TgcSkeletalMesh.xml",
                     new[]
                     {
-                        MediaDir + "SkeletalAnimations\\BasicHuman\\Animations\\Walk-TgcSkeletalAnim.xml",
-                        MediaDir + "SkeletalAnimations\\BasicHuman\\Animations\\StandBy-TgcSkeletalAnim.xml",
-                        MediaDir + "SkeletalAnimations\\BasicHuman\\Animations\\Jump-TgcSkeletalAnim.xml"
+                        MediaDir + "SkeletalAnimations\\Animations\\Walk-TgcSkeletalAnim.xml",
+                        MediaDir + "SkeletalAnimations\\Animations\\StandBy-TgcSkeletalAnim.xml"
                     });
 
             personaje.AutoTransformEnable = true;
@@ -160,44 +158,23 @@ namespace TGC.Group.Model
         }
         private void seteoDelMonstruo()
         {
-            //Paths para archivo XML de la malla
-            var pathMesh = MediaDir + "SkeletalAnimations\\Robot\\Robot-TgcSkeletalMesh.xml";
-
-            //Path para carpeta de texturas de la malla
-            var mediaPath = MediaDir + "SkeletalAnimations\\Robot\\";
-
-            //Lista de animaciones disponibles
-            string[] animationList =
-            {
-                "Parado",
-                "Caminando",
-                "Correr",
-                "PasoDerecho",
-                "PasoIzquierdo",
-                "Empujar",
-                "Patear",
-                "Pegar",
-                "Arrojar"
-            };
-
-            //Crear rutas con cada animacion
-            var animationsPath = new string[animationList.Length];
-            for (var i = 0; i < animationList.Length; i++)
-            {
-                animationsPath[i] = mediaPath + animationList[i] + "-TgcSkeletalAnim.xml";
-            }
-
             //Cargar mesh y animaciones
             var loader = new TgcSkeletalLoader();
-            monstruo = loader.loadMeshAndAnimationsFromFile(pathMesh, mediaPath, animationsPath);
+            monstruo = loader.loadMeshAndAnimationsFromFile(
+                    MediaDir + "SkeletalAnimations\\Mounstruo\\mounstruo-TgcSkeletalMesh.xml",
+                    new[]
+                    {
+                        MediaDir + "SkeletalAnimations\\Animations\\Walk-TgcSkeletalAnim.xml",
+                        MediaDir + "SkeletalAnimations\\Animations\\StandBy-TgcSkeletalAnim.xml"
+                    });
 
             monstruo.AutoTransformEnable = true;
             //Escalarlo porque es muy grande
             monstruo.Position = new Vector3(1208, 80, 518);
             //Escalamos el personaje 
-            monstruo.Scale = new Vector3(0.65f, 0.65f, 0.65f);
+            monstruo.Scale = new Vector3(1.5f, 1.2f, 1f);
 
-            monstruo.playAnimation(animationList[0], true);
+            monstruo.playAnimation("StandBy", true);
 
             boundMonstruo = new TgcBoundingElipsoid(monstruo.BoundingBox.calculateBoxCenter(), monstruo.BoundingBox.calculateAxisRadius());
 
@@ -221,10 +198,6 @@ namespace TGC.Group.Model
             seteoDelMonstruo();
             //Seteo el escenario
             escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapaProjectMarble-TgcScene.xml");
-
-            meshRecargaLuz = TgcBox.fromSize(new Vector3(10, 10, 10), Color.Red);
-            meshRecargaLuz.AutoTransformEnable = true;
-            meshRecargaLuz.Position = new Vector3(513.33f, 120.7675f, 595.4409f);
 
             //initPuertaGiratoria();   
             //Almacenar volumenes de colision del escenario
@@ -592,7 +565,6 @@ namespace TGC.Group.Model
                 #endregion
                 //renderPuerta();
                 //personaje.animateAndRender(ElapsedTime);
-                 meshRecargaLuz.render();
                 foreach (var mesh in meshEscenario)
                 {
                     //Nos ocupamos solo de las mallas habilitadas
@@ -650,7 +622,7 @@ namespace TGC.Group.Model
 
             monstruo.move(dir * 0.7f);
 
-            monstruo.playAnimation("Caminando", true);  
+            monstruo.playAnimation("Walk", true);  
 
         }
     }
