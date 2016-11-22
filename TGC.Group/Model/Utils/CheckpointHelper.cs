@@ -109,9 +109,9 @@ namespace TGC.Group.Model.Utils
         public static void BuildCheckpoints()
         {
             checkpoints = new List<Checkpoint>();
-            checkpoints.Add(new Checkpoint(new Vector3(1208f, 0f, 518f) + origenMapa));
-            checkpoints.Add(new Checkpoint(new Vector3(879f, 0f, 518f) + origenMapa));
-            checkpoints.Add(new Checkpoint(new Vector3(588f, 0f, 518f) + origenMapa));
+            checkpoints.Add(new Checkpoint(new Vector3(1208f, 0f, 450f) + origenMapa));
+            checkpoints.Add(new Checkpoint(new Vector3(879f, 0f, 450f) + origenMapa));
+            checkpoints.Add(new Checkpoint(new Vector3(588f, 0f, 450f) + origenMapa));
             checkpoints.Add(new Checkpoint(new Vector3(588f, 0f, 947f) + origenMapa));
             checkpoints.Add(new Checkpoint(new Vector3(180f, 0f, 947f) + origenMapa));
             checkpoints.Add(new Checkpoint(new Vector3(180f, 0f, 1630f) + origenMapa));
