@@ -11,7 +11,7 @@ using TGC.Core.Utils;
 
 namespace TGC.Group.Model.Utils
 {
-    class CheckpointHelper
+    static class CheckpointHelper
     {
         public static List<TgcArrow> lastCheckPointArrows;
         public static List<Checkpoint> checkpoints;
@@ -109,19 +109,15 @@ namespace TGC.Group.Model.Utils
         public static void BuildCheckpoints()
         {
             checkpoints = new List<Checkpoint>();
-            // checkpoints.Add(new Checkpoint(new Vector3(324, 150, 336)));
             checkpoints.Add(new Checkpoint(new Vector3(1208f, 0f, 518f) + origenMapa));
-            checkpoints.Add(new Checkpoint(new Vector3(879f, 0f, 510f) + origenMapa));
-            checkpoints.Add(new Checkpoint(new Vector3(588f, 0f, 500f) + origenMapa));
+            checkpoints.Add(new Checkpoint(new Vector3(879f, 0f, 518f) + origenMapa));
+            checkpoints.Add(new Checkpoint(new Vector3(588f, 0f, 518f) + origenMapa));
             checkpoints.Add(new Checkpoint(new Vector3(588f, 0f, 947f) + origenMapa));
-            checkpoints.Add(new Checkpoint(new Vector3(187f, 0f, 947f) + origenMapa));
-            checkpoints.Add(new Checkpoint(new Vector3(187f, 0f, 1588f) + origenMapa));
-            checkpoints.Add(new Checkpoint(new Vector3(712f, 0f, 1588f) + origenMapa));
-            checkpoints.Add(new Checkpoint(new Vector3(1195f, 0f, 1588f) + origenMapa));
+            checkpoints.Add(new Checkpoint(new Vector3(180f, 0f, 947f) + origenMapa));
+            checkpoints.Add(new Checkpoint(new Vector3(180f, 0f, 1630f) + origenMapa));
+            checkpoints.Add(new Checkpoint(new Vector3(712f, 0f, 1630f) + origenMapa));
+            checkpoints.Add(new Checkpoint(new Vector3(1195f, 0f, 1630f) + origenMapa));
             checkpoints.Add(new Checkpoint(new Vector3(1195f, 0f, 1063f) + origenMapa));
-            checkpoints.Add(new Checkpoint(new Vector3(972f, 0f, 1173f) + origenMapa));
-            checkpoints.Add(new Checkpoint(new Vector3(666f, 0f, 1173f) + origenMapa));
-           // checkpoints.Add(new Checkpoint(new Vector3(9.950958f, 0f, 116.7896f) + origenMapa));
 
             GenerateGraph();
             //EjemploAlumno.CreateMonsters();

@@ -18,22 +18,26 @@ using System.Windows.Forms;
 using TGC.Core.Collision;
 using TGC.Core.Sound;
 using System.Text.RegularExpressions;
+using static TGC.Group.Model.ElipsoidCollisionManager;
+using System.Linq;
 
 namespace TGC.Group.Model
 {
     public class GameModel : TgcExample
-	{
+    {
         #region inicializar
         private TgcScene escenario;
         private TgcSkeletalMesh personaje;
         private TgcBoundingElipsoid boundPersonaje;
         private TgcBoundingElipsoid boundMonstruo;
         private TgcSkeletalMesh monstruo;
-        private TgcMesh unMesh;
         private CustomSprite barra;
-        private float escalaActual=0.45f;
-		private bool escondido;
+        private float escalaActual = 0.45f;
+        private bool escondido;
+
+        private bool finDePartida = false;
         private CustomSprite energia;
+        private CustomSprite pantallaNegra;
         private Drawer2D drawer2D;
         private List<BoundingBoxCollider> objetosRecarga = new List<BoundingBoxCollider>();
         private List<TgcMesh> meshEscenario = new List<TgcMesh>();
@@ -41,96 +45,96 @@ namespace TGC.Group.Model
 
         private Luz luz;
         private bool flagGod = false;
-		private Matrix cameraRotation;
-		private float leftrightRot;
+        private Matrix cameraRotation;
+        private float leftrightRot;
         private CamaraGod camaraGod;
-		private float updownRot;
+        private float updownRot;
         private TgcMp3Player mp3Player;
         private string currentFile;
         private TgcStaticSound sound;
         public float RotationSpeed { get; set; }
-		private Vector3 viewVector;
-		Vector3 lookAt;
+        private Vector3 viewVector;
+        Vector3 lookAt;
         private Vector3 direccionLookAt;
         double rot = 0;
         double variacion;
-		float angInicial = 0f;
-		float angFinal = 80f;
-		float delta = 0.4f;
-		double angIntermedio;
+        float angInicial = 0f;
+        float angFinal = 80f;
+        float delta = 0.4f;
         private CustomSprite menu;
         private readonly List<Collider> objetosColisionables = new List<Collider>();
-		private readonly List<Collider> armarios = new List<Collider>();
-		private readonly List<TgcMesh> puertas = new List<TgcMesh>();
-
+        private readonly List<Collider> armarios = new List<Collider>();
+        private readonly List<TgcMesh> puertas = new List<TgcMesh>();
+        private ElipsoidCollisionManager colisionadorMonstruo;
         private ElipsoidCollisionManager collisionManager;
         float larg = 4;
         private Vector3 vectorOffset = new Vector3(0, 30, 0);
-        private Checkpoint ClosestCheckPoint;
-        List<TgcArrow> ArrowsClosesCheckPoint;
+
+        private Checkpoint DestinoMonstruo { get; set; }
+
         private Vector3 objetive;
         private bool estaEnMenu = true;
 
         private TgcMesh setMeshToOrigin(TgcMesh mesh)
- 		{
- 			//Desplazar los vertices del mesh para que tengan el centro del AABB en el origen
- 			var center = mesh.BoundingBox.calculateBoxCenter();
- 			mesh=moveMeshVertices(-center, mesh);
- 
- 			//Ubicar el mesh en donde estaba originalmente
- 			mesh.BoundingBox.setExtremes(mesh.BoundingBox.PMin - center, mesh.BoundingBox.PMax - center);
- 			mesh.Position = center;
- 			return mesh;
- 		}
- 
- 		private TgcMesh moveMeshVertices(Vector3 offset, TgcMesh mesh)
- 		{	
- 			switch (mesh.RenderType)
- 			{
- 			case TgcMesh.MeshRenderType.VERTEX_COLOR:
- 				var verts1 = (TgcSceneLoader.VertexColorVertex[])mesh.D3dMesh.LockVertexBuffer(typeof(TgcSceneLoader.VertexColorVertex), LockFlags.ReadOnly, mesh.D3dMesh.NumberVertices);
- 				for (var i = 0; i<verts1.Length; i++)
- 				{
- 					verts1[i].Position = verts1[i].Position + offset;
- 				}
- 				mesh.D3dMesh.SetVertexBufferData(verts1, LockFlags.None);
- 				mesh.D3dMesh.UnlockVertexBuffer();
- 					return mesh;
- 			
- 
- 			case TgcMesh.MeshRenderType.DIFFUSE_MAP:
- 				var verts2 = (TgcSceneLoader.DiffuseMapVertex[])mesh.D3dMesh.LockVertexBuffer(typeof(TgcSceneLoader.DiffuseMapVertex), LockFlags.ReadOnly, mesh.D3dMesh.NumberVertices);
- 				for (var i = 0; i<verts2.Length; i++)
- 				{
- 					verts2[i].Position = verts2[i].Position + offset;
- 				}
- 				mesh.D3dMesh.SetVertexBufferData(verts2, LockFlags.None);
- 				mesh.D3dMesh.UnlockVertexBuffer();
- 				return mesh;
- 
- 			case TgcMesh.MeshRenderType.DIFFUSE_MAP_AND_LIGHTMAP:
- 				var verts3 = (TgcSceneLoader.DiffuseMapAndLightmapVertex[])mesh.D3dMesh.LockVertexBuffer(typeof(TgcSceneLoader.DiffuseMapAndLightmapVertex), LockFlags.ReadOnly, mesh.D3dMesh.NumberVertices);
- 				for (var i = 0; i<verts3.Length; i++)
- 				{
- 					verts3[i].Position = verts3[i].Position + offset;
- 				}
- 				mesh.D3dMesh.SetVertexBufferData(verts3, LockFlags.None);
- 				mesh.D3dMesh.UnlockVertexBuffer();
- 				return mesh;
- 			}
- 			return mesh;
- 		}
+        {
+            //Desplazar los vertices del mesh para que tengan el centro del AABB en el origen
+            var center = mesh.BoundingBox.calculateBoxCenter();
+            mesh = moveMeshVertices(-center, mesh);
+
+            //Ubicar el mesh en donde estaba originalmente
+            mesh.BoundingBox.setExtremes(mesh.BoundingBox.PMin - center, mesh.BoundingBox.PMax - center);
+            mesh.Position = center;
+            return mesh;
+        }
+
+        private TgcMesh moveMeshVertices(Vector3 offset, TgcMesh mesh)
+        {
+            switch (mesh.RenderType)
+            {
+                case TgcMesh.MeshRenderType.VERTEX_COLOR:
+                    var verts1 = (TgcSceneLoader.VertexColorVertex[])mesh.D3dMesh.LockVertexBuffer(typeof(TgcSceneLoader.VertexColorVertex), LockFlags.ReadOnly, mesh.D3dMesh.NumberVertices);
+                    for (var i = 0; i < verts1.Length; i++)
+                    {
+                        verts1[i].Position = verts1[i].Position + offset;
+                    }
+                    mesh.D3dMesh.SetVertexBufferData(verts1, LockFlags.None);
+                    mesh.D3dMesh.UnlockVertexBuffer();
+                    return mesh;
 
 
-       
-		public GameModel(string mediaDir, string shadersDir) : base(mediaDir, shadersDir)
+                case TgcMesh.MeshRenderType.DIFFUSE_MAP:
+                    var verts2 = (TgcSceneLoader.DiffuseMapVertex[])mesh.D3dMesh.LockVertexBuffer(typeof(TgcSceneLoader.DiffuseMapVertex), LockFlags.ReadOnly, mesh.D3dMesh.NumberVertices);
+                    for (var i = 0; i < verts2.Length; i++)
+                    {
+                        verts2[i].Position = verts2[i].Position + offset;
+                    }
+                    mesh.D3dMesh.SetVertexBufferData(verts2, LockFlags.None);
+                    mesh.D3dMesh.UnlockVertexBuffer();
+                    return mesh;
+
+                case TgcMesh.MeshRenderType.DIFFUSE_MAP_AND_LIGHTMAP:
+                    var verts3 = (TgcSceneLoader.DiffuseMapAndLightmapVertex[])mesh.D3dMesh.LockVertexBuffer(typeof(TgcSceneLoader.DiffuseMapAndLightmapVertex), LockFlags.ReadOnly, mesh.D3dMesh.NumberVertices);
+                    for (var i = 0; i < verts3.Length; i++)
+                    {
+                        verts3[i].Position = verts3[i].Position + offset;
+                    }
+                    mesh.D3dMesh.SetVertexBufferData(verts3, LockFlags.None);
+                    mesh.D3dMesh.UnlockVertexBuffer();
+                    return mesh;
+            }
+            return mesh;
+        }
+
+
+
+        public GameModel(string mediaDir, string shadersDir) : base(mediaDir, shadersDir)
         {
             Category = Game.Default.Category;
             Name = Game.Default.Name;
             Description = Game.Default.Description;
         }
 
-		//Caja que se muestra en el ejemplo.
+        //Caja que se muestra en el ejemplo.
         private TgcBox Box { get; set; }
 
         //Mesh de TgcLogo.
@@ -139,7 +143,8 @@ namespace TGC.Group.Model
         //Boleano para ver si dibujamos el boundingbox
         private bool BoundingBox { get; set; }
         #endregion
-        private void seteoDePersonaje() {
+        private void seteoDePersonaje()
+        {
             //Cargar personaje con animaciones
             var skeletalLoader = new TgcSkeletalLoader();
             personaje =
@@ -153,7 +158,9 @@ namespace TGC.Group.Model
 
             personaje.AutoTransformEnable = true;
             personaje.Scale = new Vector3(1f, 1f, 1f);
-            personaje.Position = new Vector3(1269f,79f, -354f);
+            //personaje.Position = new Vector3(1269f, 79f, -354f);
+            personaje.Position = new Vector3(1208f, 80, 518);
+           
             personaje.rotateY(Geometry.DegreeToRadian(180f));
             boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter(), personaje.BoundingBox.calculateAxisRadius());
         }
@@ -162,7 +169,7 @@ namespace TGC.Group.Model
             //Cargar mesh y animaciones
             var loader = new TgcSkeletalLoader();
             monstruo = loader.loadMeshAndAnimationsFromFile(
-                    MediaDir + "SkeletalAnimations\\Mounstruo\\mounstruo-TgcSkeletalMesh.xml",
+                    MediaDir + "SkeletalAnimations\\Monstruo\\monstruo-TgcSkeletalMesh.xml",
                     new[]
                     {
                         MediaDir + "SkeletalAnimations\\Animations\\Walk-TgcSkeletalAnim.xml",
@@ -170,13 +177,12 @@ namespace TGC.Group.Model
                     });
 
             monstruo.AutoTransformEnable = true;
-            //Escalarlo porque es muy grande
-            monstruo.Position = new Vector3(1208, 80, 518);
+            monstruo.Position = new Vector3(1208f, 80, 518f);
             //Escalamos el personaje 
             monstruo.Scale = new Vector3(1.5f, 1.2f, 1f);
-
+            
             monstruo.playAnimation("StandBy", true);
-
+ 
             boundMonstruo = new TgcBoundingElipsoid(monstruo.BoundingBox.calculateBoxCenter(), monstruo.BoundingBox.calculateAxisRadius());
 
 
@@ -191,14 +197,14 @@ namespace TGC.Group.Model
 
             Clipboard.Clear();
 
-			escondido = false;
+            escondido = false;
             this.inicializarCamara();
             //Seteo el personaje
             seteoDePersonaje();
             //Seteo del monsturo
             seteoDelMonstruo();
             //Seteo el escenario
-            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapaProjectMarble-TgcScene.xml");
+            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapaProjectMarbleOtro-TgcScene.xml");
 
             //initPuertaGiratoria();   
             //Almacenar volumenes de colision del escenario
@@ -210,7 +216,7 @@ namespace TGC.Group.Model
                 if (mesh.Name.Contains("Recarga"))
                 {
                     BoundingBoxCollider recarga = BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox);
-                    string[] nombre = Regex.Split(mesh.Name,"-");
+                    string[] nombre = Regex.Split(mesh.Name, "-");
                     recarga.nombre = nombre[1];
                     recarga.mesh = mesh;
                     objetosRecarga.Add(recarga);
@@ -234,21 +240,28 @@ namespace TGC.Group.Model
             }
 
             CheckpointHelper.BuildCheckpoints();
+            DestinoMonstruo = CheckpointHelper.checkpoints[0];
 
             //Crear manejador de colisiones
             collisionManager = new ElipsoidCollisionManager();
+            collisionManager.SlideFactor = 2;
             collisionManager.GravityEnabled = false;
+            colisionadorMonstruo = new ElipsoidCollisionManager();
+            colisionadorMonstruo.SlideFactor = 2;
+            colisionadorMonstruo.GravityEnabled = false;
             drawer2D = new Drawer2D();
             this.incializarMenu();
+            inicializarPantallaNegra();
             mp3Player = new TgcMp3Player();
             inicializarBarra();
             luz = new Linterna();
         }
-        private void incializarMenu() {
+        private void incializarMenu()
+        {
             menu = new CustomSprite();
             menu.Bitmap = new CustomBitmap(MediaDir + "\\menuInicio.png", D3DDevice.Instance.Device);
             var textureSize = menu.Bitmap.Size;
-            menu.Position = new Vector2(0,0);
+            menu.Position = new Vector2(0, 0);
             menu.Scaling = new Vector2((float)D3DDevice.Instance.Width / textureSize.Width, (float)D3DDevice.Instance.Height / textureSize.Height + 0.01f);
 
         }
@@ -266,80 +279,89 @@ namespace TGC.Group.Model
             energia.Scaling = new Vector2(escalaActual, 0.4f);
             energia.Position = new Vector2(22 + barra.Position.X, 16 + barra.Position.Y);
         }
-
+        private void inicializarPantallaNegra() {
+            pantallaNegra = new CustomSprite();
+            pantallaNegra.Bitmap = new CustomBitmap(MediaDir + "\\pantallaNegra.png", D3DDevice.Instance.Device);
+            var textureSize = pantallaNegra.Bitmap.Size;
+            pantallaNegra.Position = new Vector2(0, 0);
+            pantallaNegra.Scaling = new Vector2((float)D3DDevice.Instance.Width / textureSize.Width, (float)D3DDevice.Instance.Height / textureSize.Height);
+        }
         private void inicializarCamara()
         {
             var d3dDevice = D3DDevice.Instance.Device;
             leftrightRot = FastMath.PI_HALF;
             updownRot = -FastMath.PI / 10.0f;
             cameraRotation = Matrix.RotationX(updownRot) * Matrix.RotationY(leftrightRot);
-            Cursor.Position = new Point(D3DDevice.Instance.Device.Viewport.Width / 2,D3DDevice.Instance.Device.Viewport.Height / 2);
+            Cursor.Position = new Point(D3DDevice.Instance.Device.Viewport.Width / 2, D3DDevice.Instance.Device.Viewport.Height / 2);
             RotationSpeed = 0.1f;
             viewVector = new Vector3(1, 0, 0);
         }
 
-        private void godMod() {
-            camaraGod = new CamaraGod(true,boundPersonaje.Position,Input);
+        private void godMod()
+        {
+            camaraGod = new CamaraGod(true, boundPersonaje.Position, Input);
         }
         //OFFSET PARA PRIMERA PERSONA CON MANOS
-        private Vector3 getOffset() {
+        private Vector3 getOffset()
+        {
             return personaje.Position + vectorOffset;
         }
-        private void animacionDePuerta(TgcMesh unMesh) {
-       
+        private void animacionDePuerta(TgcMesh unMesh)
+        {
+
             if (Input.keyPressed(Key.U))
             {
-				
-				if (rot >= 1.57)
-				{
-					rot = 1.57;
-					variacion = -0.9 * ElapsedTime;
-				};
-				if (rot <= 0)
-				{
-					rot = 0;
-					variacion = 0.9 * ElapsedTime;
-				};
-				rot += variacion;
-				var ang = System.Convert.ToSingle(rot);
 
-				unMesh.rotateY(ang);
-               unMesh.move(new Vector3(System.Convert.ToSingle((larg - (Math.Cos(rot + 3.14) * larg))), 0, System.Convert.ToSingle(Math.Sin(rot + 3.14) * larg)));
-			
-				//Si superamos cierto Y volvemos a la posición original.
-				//if (Camara.Position.Y > 300f)
-				// {
-				//     Camara.SetCamera(new Vector3(Camara.Position.X, 0f, Camara.Position.Z), Camara.LookAt);
-				//  }
-			}
-           
-           }
-		private void controlDeArmario(Collider mesh)
-		{
-			if ((boundPersonaje.Center - mesh.BoundingSphere.Center).Length() < (boundPersonaje.Radius.Length() + mesh.BoundingSphere.Radius))
-			{
-				
-				Camara.SetCamera(Vector3.Add(mesh.BoundingSphere.Center,new Vector3(1,1,1)), lookAt*(-1));
-			}
-		}
+                if (rot >= 1.57)
+                {
+                    rot = 1.57;
+                    variacion = -0.9 * ElapsedTime;
+                };
+                if (rot <= 0)
+                {
+                    rot = 0;
+                    variacion = 0.9 * ElapsedTime;
+                };
+                rot += variacion;
+                var ang = System.Convert.ToSingle(rot);
 
-		public void rotarPuerta(TgcMesh puerta)
-		{
-			Vector3 posicionVieja = puerta.Position;
-			puerta.Position = new Vector3(puerta.Position.X, 0, puerta.Position.Z);
-			float angIntermedio=angInicial * (1.0f - delta) + angFinal * delta;
-			puerta.rotateY(angIntermedio);
-			puerta.Position = posicionVieja;
+                unMesh.rotateY(ang);
+                unMesh.move(new Vector3(System.Convert.ToSingle((larg - (Math.Cos(rot + 3.14) * larg))), 0, System.Convert.ToSingle(Math.Sin(rot + 3.14) * larg)));
 
-		}
-		private void controlDePuerta(TgcMesh mesh)
-		{
-			if ((boundPersonaje.Center - mesh.Position).Length() < (boundPersonaje.Radius.Length() + larg))
-			{
+                //Si superamos cierto Y volvemos a la posición original.
+                //if (Camara.Position.Y > 300f)
+                // {
+                //     Camara.SetCamera(new Vector3(Camara.Position.X, 0f, Camara.Position.Z), Camara.LookAt);
+                //  }
+            }
 
-				rotarPuerta(mesh);
-			}
-		}
+        }
+        private void controlDeArmario(Collider mesh)
+        {
+            if ((boundPersonaje.Center - mesh.BoundingSphere.Center).Length() < (boundPersonaje.Radius.Length() + mesh.BoundingSphere.Radius))
+            {
+
+                Camara.SetCamera(Vector3.Add(mesh.BoundingSphere.Center, new Vector3(1, 1, 1)), lookAt * (-1));
+            }
+        }
+
+        public void rotarPuerta(TgcMesh puerta)
+        {
+            Vector3 posicionVieja = puerta.Position;
+            puerta.Position = new Vector3(puerta.Position.X, 0, puerta.Position.Z);
+            float angIntermedio = angInicial * (1.0f - delta) + angFinal * delta;
+            puerta.rotateY(angIntermedio);
+            puerta.Position = posicionVieja;
+
+        }
+        private void controlDePuerta(TgcMesh mesh)
+        {
+            if ((boundPersonaje.Center - mesh.Position).Length() < (boundPersonaje.Radius.Length() + larg))
+            {
+
+                rotarPuerta(mesh);
+            }
+        }
         private void cargarSonido(string filePath)
         {
             filePath = MediaDir + filePath;
@@ -361,9 +383,9 @@ namespace TGC.Group.Model
         }
         public void moverPersonaje()
         {
-			if (!flagGod && !escondido)
+            if (!flagGod && !escondido)
             {
-                var velocidadCaminar = 1.0f; 
+                var velocidadCaminar = 1.0f;
                 var moveVector = new Vector3(0, 0, 0);
                 var moving = false;
                 if (Input.keyDown(Key.W))
@@ -413,7 +435,7 @@ namespace TGC.Group.Model
                 lookAt = Vector3.Add(getOffset(), direccionLookAt); //vector lookAt final
 
                 Camara.SetCamera(getOffset(), lookAt);
-                collisionManager.SlideFactor = 2;
+
                 foreach (var puerta in puertas)
                 {
                     animacionDePuerta(puerta);
@@ -425,12 +447,13 @@ namespace TGC.Group.Model
                     {
                         controlDeArmario(armario);
                     }
-					if (escondido) { escondido = false; }
-					else { escondido = false; };
+                    if (escondido) { escondido = false; }
+                    else { escondido = false; };
                 }
-				foreach (var puerta in puertas) {
-					controlDePuerta(puerta);
-				}
+                foreach (var puerta in puertas)
+                {
+                    controlDePuerta(puerta);
+                }
                 this.getColisionContraObjetoCarga();
                 luz.consumir(ElapsedTime);
             }
@@ -439,7 +462,8 @@ namespace TGC.Group.Model
         private void getColisionContraObjetoCarga()
         {
             BoundingBoxCollider re = new BoundingBoxCollider();
-            foreach (BoundingBoxCollider recarga in objetosRecarga) {
+            foreach (BoundingBoxCollider recarga in objetosRecarga)
+            {
                 if ((boundPersonaje.Center - recarga.BoundingSphere.Center).Length() < (boundPersonaje.Radius.Length() + recarga.BoundingSphere.Radius))
                 {
                     re = recarga;
@@ -447,19 +471,21 @@ namespace TGC.Group.Model
                     {
                         luz.tiempoAcumulado = 0;
                         luz.setMaximaEnergia();
-                        
-                    } else {
+
+                    }
+                    else
+                    {
                         switch (recarga.nombre)
                         {
                             case "Vela":
                                 luz = new Vela();
-                            break;
+                                break;
                             case "Linterna":
                                 luz = new Linterna();
-                            break;
+                                break;
                             case "Faro":
                                 luz = new Faro();
-                            break;
+                                break;
                         }
                     }
                     meshEscenario.Remove(recarga.mesh);
@@ -468,11 +494,18 @@ namespace TGC.Group.Model
             objetosRecarga.Remove(re);
         }
 
+        private void ponerPantallaEnNegro() {
+            drawer2D.BeginDrawSprite();
+            drawer2D.DrawSprite(pantallaNegra);
+            drawer2D.EndDrawSprite();
+        }
+
+        private bool destinoMonstruo = true;
 
         public override void Update()
         {
             PreUpdate();
-            if (!estaEnMenu)
+            if (!estaEnMenu && !finDePartida)
             {
                 if (Input.keyPressed(Key.G))
                 {
@@ -498,7 +531,6 @@ namespace TGC.Group.Model
 
                 logicaDelMonstruo();
 
-
                 if (Input.keyPressed(Key.C))
                 {
                     Clipboard.SetText(Clipboard.GetText() + String.Format(" checkpoints.Add(new Checkpoint(new Vector3({0}f, {1}f, {2}f) + origenMapa)); \n", Camara.Position.X - CheckpointHelper.origenMapa.X, 150 - CheckpointHelper.origenMapa.Y, Camara.Position.Z - CheckpointHelper.origenMapa.Z));
@@ -506,11 +538,12 @@ namespace TGC.Group.Model
                 }
                 actualizarEnergia();
             }
-            if(estaEnMenu && Input.keyPressed(Key.Space))
+            if (estaEnMenu && Input.keyPressed(Key.Space))
             {
                 estaEnMenu = false;
                 cargarSonido("pisada.wav");
             }
+
         }
 
         private void actualizarEnergia()
@@ -519,7 +552,8 @@ namespace TGC.Group.Model
             energia.Scaling = new Vector2(escalaActual, 0.4f);
         }
 
-        private void reproducirSonido(string nombre) {
+        private void reproducirSonido(string nombre)
+        {
             mp3Player.FileName = MediaDir + nombre;
             if (mp3Player.getStatus() == TgcMp3Player.States.Open)
             {
@@ -540,13 +574,16 @@ namespace TGC.Group.Model
                 drawer2D.EndDrawSprite();
                 reproducirSonido("st.mp3");
             }
-            else
+            if (finDePartida)
             {
-              //  DrawText.drawText("[G]-Habilita GodMod ", 0, 20, Color.OrangeRed);
-            //    DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(getOffset()), 0, 30, Color.OrangeRed);
-              //  DrawText.drawText("armarios: " + armarios.Count.ToString(), 0, 50, Color.OrangeRed);
-               // DrawText.drawText("puertas " + puertas.Count.ToString(), 0, 70, Color.OrangeRed);
-                DrawText.drawText(luz.getNombreYEnergia(), 0, 90, Color.OrangeRed);
+                System.Drawing.Font font = new System.Drawing.Font("Arial", 15, FontStyle.Bold);
+                DrawText.changeFont(font);
+                DrawText.drawText("HAS PERDIDO", D3DDevice.Instance.Width / 2, D3DDevice.Instance.Height / 2, Color.OrangeRed);
+            }
+            if(!estaEnMenu && !finDePartida){
+                //  DrawText.drawText("[G]-Habilita GodMod ", 0, 20, Color.OrangeRed);
+                DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(Camara.Position), 0, 150, Color.Blue);
+                DrawText.drawText(luz.getNombreYEnergia(), 0, 90, Color.Blue);
                 drawer2D.BeginDrawSprite();
 
                 //Dibujar sprite (si hubiese mas, deberian ir todos aquí)
@@ -556,11 +593,7 @@ namespace TGC.Group.Model
                 //Finalizar el dibujado de Sprites
                 drawer2D.EndDrawSprite();
                 #region ComentoCheckPoint
-                Checkpoint closestCheckpoint = CheckpointHelper.GetClosestCheckPoint(Camara.Position);
-
-               // DrawText.drawText("Checkpoint Id: " + closestCheckpoint.id, 0, 40, Color.OrangeRed);
-                //ArrowsClosesCheckPoint = CheckpointHelper.PrepareClosestCheckPoint(Camara.Position, ClosestCheckPoint, out ClosestCheckPoint);
-              //  ArrowsClosesCheckPoint.ForEach(a => a.render());
+                DrawText.drawText("Checkpoint Id: " + DestinoMonstruo.id, 0, 40, Color.OrangeRed);
                 monstruo.animateAndRender(ElapsedTime);
                 CheckpointHelper.renderAll();
                 #endregion
@@ -597,34 +630,151 @@ namespace TGC.Group.Model
             personaje.dispose();
             boundPersonaje.dispose();
             boundMonstruo.dispose();
-            sound.dispose();
-
         }
-
+        public Vector3 objective;
+        private bool getFinDePartida()
+        {
+            return (boundPersonaje.Center - boundMonstruo.Center).Length() < (boundPersonaje.Radius.Length() + boundMonstruo.Radius.Length());
+        }
+        
         public void logicaDelMonstruo()
         {
-            var monsterClosestCheckpoint = CheckpointHelper.GetClosestCheckPoint(monstruo.Position);
-            var avatarClosestCheckpoint = CheckpointHelper.GetClosestCheckPoint(this.Camara.Position);
-            if (monsterClosestCheckpoint.Neighbors.Contains(avatarClosestCheckpoint) ||avatarClosestCheckpoint == monsterClosestCheckpoint)
+            //var monsterClosestCheckpoint = CheckpointHelper.GetClosestCheckPoint(monstruo.Position);
+            // var avatarClosestCheckpoint = CheckpointHelper.GetClosestCheckPoint(personaje.Position);
+            /*if (monsterClosestCheckpoint.Neighbors.Contains(avatarClosestCheckpoint) || avatarClosestCheckpoint == monsterClosestCheckpoint)
             {
-                objetive = this.Camara.Position;
+                objetive = personaje.Position;
             }
             else
+            {*/
+            //Encontrar el algoritmo del camino más corto de un checkpoint al otro
+            // var nextCheckpoint = monsterClosestCheckpoint.Neighbors.First(c => c.CanArriveTo(avatarClosestCheckpoint));
+
+            float distanciaAlCheckPointDestino = Vector3.Length(DestinoMonstruo.Position - monstruo.Position);
+            bool rotacionPorCambioDeDestino = false;
+            if (distanciaAlCheckPointDestino < 100f)
             {
-                //Encontrar el algoritmo del camino más corto de un checkpoint al otro
-                var nextCheckpoint = monsterClosestCheckpoint.Neighbors.Find(c => c.CanArriveTo(avatarClosestCheckpoint));
-                objetive = nextCheckpoint.Position;
+                //Intercambio de checkpoint
+                int actual = CheckpointHelper.checkpoints.FindIndex(c => c == DestinoMonstruo);
+                int proxPos = actual;
+
+                if(actual==CheckpointHelper.checkpoints.Count-1)
+                {
+                    if(destinoMonstruo)
+                    {
+                        destinoMonstruo = false;
+
+                    }
+                    else
+                    {
+                        destinoMonstruo = true;
+                    }
+                }
+
+                if (destinoMonstruo) { proxPos++; } else { proxPos--; }
+
+                var siguienteCheckPoint = CheckpointHelper.checkpoints[proxPos];
+
+                DestinoMonstruo = siguienteCheckPoint;
+                rotacionPorCambioDeDestino = true;
             }
+            objetive = DestinoMonstruo.Position;
 
             Vector3 dir = objetive - this.monstruo.Position;
 
             dir = new Vector3(dir.X, 0f, dir.Z);
+            
+           
             dir.Normalize();
+            if (rotacionPorCambioDeDestino) { float anguloNuevo = (float)Math.Atan2(dir.X, dir.Z); monstruo.rotateY(anguloNuevo); }
+            var realMovement = colisionadorMonstruo.moveCharacter(boundMonstruo, dir, objetosColisionables);
+            monstruo.move(realMovement);
+            monstruo.playAnimation("Walk", true);
 
-            monstruo.move(dir * 0.7f);
+            
 
-            monstruo.playAnimation("Walk", true);  
-
+            //finDePartida = getFinDePartida();
         }
+        /*enum Estado { PERSIGUIENDO, PARADO, ATACANDO, MUERTO, ESQUIVANDO };
+        Estado estado = Estado.PARADO;
+        Vector3 direccionMovimiento;
+        float velocidadMonstruo = 25f;
+        float anguloAnterior = (float)Math.PI / 2;*/
+        /*
+        public void logicaEnemigo()
+        {
+            switch (estado)
+            {
+                case Estado.PARADO:
+                    monstruo.playAnimation("StandBy", true);
+                    if ((personaje.Position - monstruo.Position).Length() < 250f)
+                    {
+                        estado = Estado.PERSIGUIENDO;
+                    }
+                    break;
+                case Estado.PERSIGUIENDO:
+                    monstruo.playAnimation("Run", true);
+
+                    Vector3 lastPos = monstruo.Position;
+                    Vector3 posicionPersonaje = personaje.Position;
+                    direccionMovimiento = posicionPersonaje - lastPos;
+                    direccionMovimiento.Y = 0;
+                    direccionMovimiento.Normalize();
+
+                    monstruo.move(direccionMovimiento * velocidadMonstruo * ElapsedTime);
+
+                    float angulo = (float)Math.Atan2(monstruo.Position.Z - personaje.Position.Z, monstruo.Position.X - personaje.Position.X);
+                    monstruo.rotateY(anguloAnterior - angulo);
+                    anguloAnterior = angulo;
+
+                    //Detectar colisiones de BoundingBox utilizando herramienta TgcCollisionUtils
+
+                    detectarColisiones(objetos);
+
+
+                    //Si hubo colision, restaurar la posicion anterior
+                    if (collide)
+                    {
+                        estado = Estado.ESQUIVANDO;
+                        float unAngulo = (float)Math.PI / 2;
+                        direccionMovimiento = new Vector3((float)Math.Cos(unAngulo + monstruo.Rotation.Y), 0, (float)Math.Sin(unAngulo + monstruo.Rotation.Y));
+                        direccionMovimiento.Normalize();
+                        collide = false;
+                    }
+
+                    atacarAPersonaje(personaje);
+
+
+                    break;
+                case Estado.ESQUIVANDO:
+                    monstruo.playAnimation("Walk", true);
+
+
+                    if (objetoConElQueChoco == null)
+                    {
+                        estado = Estado.PERSIGUIENDO;
+                    }
+                    else
+                    {
+                        TgcCollisionUtils.BoxBoxResult resultado = TgcCollisionUtils.classifyBoxBox(enemigo.BoundingBox, objetoConElQueChoco.colisionFisica);
+                        if (resultado == TgcCollisionUtils.BoxBoxResult.Adentro || resultado == TgcCollisionUtils.BoxBoxResult.Atravesando)
+                        {
+                            monstruo.move(direccionMovimiento * velocidadMonstruo * ElapsedTime);
+
+                        }
+                        else
+                        {
+
+                            estado = Estado.PERSIGUIENDO;
+                        }
+                    }
+                    break;
+            }
+            if (renderizar)
+            {
+                enemigo.animateAndRender();
+            }
+
+        }*/
     }
 }
