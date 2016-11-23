@@ -17,7 +17,6 @@ namespace TGC.Group.Model.Utils
         public static List<Checkpoint> checkpoints;
         public static GameModel EjemploAlumno { get; set; }
         public static Vector3 origenMapa = new Vector3(0, 150, 0);
-        //public static Vector3 origenMapa = new Vector3(325, 150, 474);
         public static void renderAll()
         {
             checkpoints.ForEach(c => c.render());
@@ -120,7 +119,6 @@ namespace TGC.Group.Model.Utils
             checkpoints.Add(new Checkpoint(new Vector3(1195f, 0f, 1063f) + origenMapa));
 
             GenerateGraph();
-            //EjemploAlumno.CreateMonsters();
         }
 
     }

@@ -182,7 +182,6 @@ namespace TGC.Group.Model
             monstruo.Scale = new Vector3(1.5f, 1.2f, 1f);
             
             monstruo.playAnimation("StandBy", true);
- 
             boundMonstruo = new TgcBoundingElipsoid(monstruo.BoundingBox.calculateBoxCenter(), monstruo.BoundingBox.calculateAxisRadius());
 
 
@@ -346,15 +345,6 @@ namespace TGC.Group.Model
             }
         }
 
-        public void rotarPuerta(TgcMesh puerta)
-        {
-            Vector3 posicionVieja = puerta.Position;
-            puerta.Position = new Vector3(puerta.Position.X, 0, puerta.Position.Z);
-            float angIntermedio = angInicial * (1.0f - delta) + angFinal * delta;
-            puerta.rotateY(angIntermedio);
-            puerta.Position = posicionVieja;
-
-        }
         private float epsilon = 40f;
         private void controlDePuerta(Collider puerta)
         {
@@ -657,7 +647,7 @@ namespace TGC.Group.Model
             //Finaliza el render y presenta en pantalla, al igual que el preRender se debe para casos puntuales es mejor utilizar a mano las operaciones de EndScene y PresentScene
             PostRender();
         }
-
+        float anguloAnterior = (float)Math.PI;
         public override void Dispose()
         {
             escenario.disposeAll();
@@ -670,7 +660,6 @@ namespace TGC.Group.Model
         {
             return (boundPersonaje.Center - boundMonstruo.Center).Length() < (boundPersonaje.Radius.Length() + boundMonstruo.Radius.Length());
         }
-        private float anguloAnterior = (float)Math.PI / 2;
         public void logicaPersecucion(Vector3 dir)
         {
             dir.Y = 0;
@@ -712,7 +701,11 @@ namespace TGC.Group.Model
                     int actual = CheckpointHelper.checkpoints.FindIndex(c => c == DestinoMonstruo);
                     int proxPos = actual;
 
-                    if (actual == CheckpointHelper.checkpoints.Count - 1 && destinoMonstruo) destinoMonstruo = false;
+                    if (actual == CheckpointHelper.checkpoints.Count - 1 && destinoMonstruo)
+                    {
+                        destinoMonstruo = false;
+
+                    }
                     if (actual == 0 && !destinoMonstruo) destinoMonstruo = true;
 
                     if (destinoMonstruo) { proxPos++; } else { proxPos--; }
@@ -727,10 +720,13 @@ namespace TGC.Group.Model
                 Vector3 dir = objetive - this.monstruo.Position;
 
                 dir = new Vector3(dir.X, 0f, dir.Z);
-
-
                 dir.Normalize();
-                if (rotacionPorCambioDeDestino) { float anguloNuevo = (float)Math.Atan2(dir.X, dir.Z); monstruo.rotateY(anguloNuevo); }
+
+                if (rotacionPorCambioDeDestino) {
+                    float angulo = (float)Math.Atan2( -dir.X, dir.Z);
+                    monstruo.rotateY(anguloAnterior - angulo);
+                    anguloAnterior = angulo;
+                }
                 var realMovement = colisionadorMonstruo.moveCharacter(boundMonstruo, dir, objetosColisionables);
                 monstruo.move(realMovement);
                 monstruo.playAnimation("Walk", true);
