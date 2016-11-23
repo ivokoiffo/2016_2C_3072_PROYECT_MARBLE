@@ -33,7 +33,7 @@ namespace TGC.Group.Model
         private TgcSkeletalMesh monstruo;
         private CustomSprite barra;
         private float escalaActual = 0.45f;
-        private bool escondido;
+        private bool escondido=false;
         private bool persecucion = false;
         private bool finDePartida = false;
         private CustomSprite energia;
@@ -58,9 +58,6 @@ namespace TGC.Group.Model
         private Vector3 direccionLookAt;
         double rot = 0;
         double variacion;
-        float angInicial = 0f;
-        float angFinal = 80f;
-        float delta = 0.4f;
         private CustomSprite menu;
         private readonly List<Collider> objetosColisionables = new List<Collider>();
         private readonly List<Collider> armarios = new List<Collider>();
@@ -71,60 +68,7 @@ namespace TGC.Group.Model
         private Vector3 vectorOffset = new Vector3(0, 30, 0);
 
         private Checkpoint DestinoMonstruo { get; set; }
-
-        private Vector3 objetive;
         private bool estaEnMenu = true;
-
-        private TgcMesh setMeshToOrigin(TgcMesh mesh)
-        {
-            //Desplazar los vertices del mesh para que tengan el centro del AABB en el origen
-            var center = mesh.BoundingBox.calculateBoxCenter();
-            mesh = moveMeshVertices(-center, mesh);
-
-            //Ubicar el mesh en donde estaba originalmente
-            mesh.BoundingBox.setExtremes(mesh.BoundingBox.PMin - center, mesh.BoundingBox.PMax - center);
-            mesh.Position = center;
-            return mesh;
-        }
-
-        private TgcMesh moveMeshVertices(Vector3 offset, TgcMesh mesh)
-        {
-            switch (mesh.RenderType)
-            {
-                case TgcMesh.MeshRenderType.VERTEX_COLOR:
-                    var verts1 = (TgcSceneLoader.VertexColorVertex[])mesh.D3dMesh.LockVertexBuffer(typeof(TgcSceneLoader.VertexColorVertex), LockFlags.ReadOnly, mesh.D3dMesh.NumberVertices);
-                    for (var i = 0; i < verts1.Length; i++)
-                    {
-                        verts1[i].Position = verts1[i].Position + offset;
-                    }
-                    mesh.D3dMesh.SetVertexBufferData(verts1, LockFlags.None);
-                    mesh.D3dMesh.UnlockVertexBuffer();
-                    return mesh;
-
-
-                case TgcMesh.MeshRenderType.DIFFUSE_MAP:
-                    var verts2 = (TgcSceneLoader.DiffuseMapVertex[])mesh.D3dMesh.LockVertexBuffer(typeof(TgcSceneLoader.DiffuseMapVertex), LockFlags.ReadOnly, mesh.D3dMesh.NumberVertices);
-                    for (var i = 0; i < verts2.Length; i++)
-                    {
-                        verts2[i].Position = verts2[i].Position + offset;
-                    }
-                    mesh.D3dMesh.SetVertexBufferData(verts2, LockFlags.None);
-                    mesh.D3dMesh.UnlockVertexBuffer();
-                    return mesh;
-
-                case TgcMesh.MeshRenderType.DIFFUSE_MAP_AND_LIGHTMAP:
-                    var verts3 = (TgcSceneLoader.DiffuseMapAndLightmapVertex[])mesh.D3dMesh.LockVertexBuffer(typeof(TgcSceneLoader.DiffuseMapAndLightmapVertex), LockFlags.ReadOnly, mesh.D3dMesh.NumberVertices);
-                    for (var i = 0; i < verts3.Length; i++)
-                    {
-                        verts3[i].Position = verts3[i].Position + offset;
-                    }
-                    mesh.D3dMesh.SetVertexBufferData(verts3, LockFlags.None);
-                    mesh.D3dMesh.UnlockVertexBuffer();
-                    return mesh;
-            }
-            return mesh;
-        }
-
 
 
         public GameModel(string mediaDir, string shadersDir) : base(mediaDir, shadersDir)
@@ -157,10 +101,11 @@ namespace TGC.Group.Model
                     });
 
             personaje.AutoTransformEnable = true;
-            personaje.Scale = new Vector3(1f, 1f, 1f);
+            personaje.Scale = new Vector3(1f, 0.5f, 1f);
+            //INICIO DEL PERSONAJE COMENTADO
             //personaje.Position = new Vector3(1269f, 79f, -354f);
-            personaje.Position = new Vector3(1208f, 80, 518);
-           
+            //personaje.Position = new Vector3(1100f, 80, 518);
+            personaje.Position = new Vector3(1191.188f, 80, 1158.09f);   
             personaje.rotateY(Geometry.DegreeToRadian(180f));
             boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter(), personaje.BoundingBox.calculateAxisRadius());
         }
@@ -195,8 +140,6 @@ namespace TGC.Group.Model
             System.Threading.Thread.CurrentThread.CurrentCulture = customCulture;
 
             Clipboard.Clear();
-
-            escondido = false;
             this.inicializarCamara();
             //Seteo el personaje
             seteoDePersonaje();
@@ -340,7 +283,7 @@ namespace TGC.Group.Model
         {
             if ((boundPersonaje.Center - mesh.BoundingSphere.Center).Length() < (boundPersonaje.Radius.Length() + mesh.BoundingSphere.Radius))
             {
-
+                escondido = true;
                 Camara.SetCamera(Vector3.Add(mesh.BoundingSphere.Center, new Vector3(1, 1, 1)), lookAt * (-1));
             }
         }
@@ -400,11 +343,11 @@ namespace TGC.Group.Model
                 sound.loadSound(currentFile, DirectSound.DsDevice);
             }
         }
-        public void moverPersonaje()
+        public void moverPersonaje() 
         {
             if (!flagGod && !escondido)
             {
-                var velocidadCaminar = 2f;
+                var velocidadCaminar = 1f;
                 var moveVector = new Vector3(0, 0, 0);
                 var moving = false;
                 if (Input.keyDown(Key.W))
@@ -508,7 +451,7 @@ namespace TGC.Group.Model
             drawer2D.EndDrawSprite();
         }
 
-        private bool destinoMonstruo = true;
+        private bool avanzaPositivamente = true;
 
         public override void Update()
         {
@@ -534,31 +477,30 @@ namespace TGC.Group.Model
                     Camara.SetCamera(pos.posicion, pos.lookAt);
                 }
                 else { moverPersonaje(); }
-                /*
+                
                 var dir = monstruo.Position - personaje.Position;
                 float distanciaAPersonaje = Vector3.Length(dir);
-                if (distanciaAPersonaje < 100f)
+                if (distanciaAPersonaje < 300f && !escondido)
                 {
                     persecucion = true;
-                    logicaPersecucion(dir);
+                    logicaPersecucion();
                 }
                 else
-                {*/
-                logicaDelMonstruo();
-
-                if (Input.keyPressed(Key.C))
                 {
-                    Clipboard.SetText(Clipboard.GetText() + String.Format(" checkpoints.Add(new Checkpoint(new Vector3({0}f, {1}f, {2}f) + origenMapa)); \n", Camara.Position.X - CheckpointHelper.origenMapa.X, 150 - CheckpointHelper.origenMapa.Y, Camara.Position.Z - CheckpointHelper.origenMapa.Z));
-                    CheckpointHelper.checkpoints.Add(new Checkpoint(new Vector3(Camara.Position.X, 150, Camara.Position.Z)));
+                    logicaDelMonstruo();
                 }
-                if (Input.keyDown(Key.E))
+                //DESCOMENTAR
+                //finDePartida = getFinDePartida();
+                if (Input.keyPressed(Key.E))
                 {
                     foreach (var armario in armarios)
                     {
                         controlDeArmario(armario);
                     }
-                    if (escondido) { escondido = false; }
-                    else { escondido = false; };
+                }
+                if (Input.keyUp(Key.E))
+                {
+                    if (escondido) { escondido = false;}
                 }
                 actualizarEnergia();
             }
@@ -648,6 +590,7 @@ namespace TGC.Group.Model
             PostRender();
         }
         float anguloAnterior = (float)Math.PI;
+
         public override void Dispose()
         {
             escenario.disposeAll();
@@ -660,36 +603,32 @@ namespace TGC.Group.Model
         {
             return (boundPersonaje.Center - boundMonstruo.Center).Length() < (boundPersonaje.Radius.Length() + boundMonstruo.Radius.Length());
         }
-        public void logicaPersecucion(Vector3 dir)
+        public void logicaPersecucion()
         {
-            dir.Y = 0;
-            dir.Normalize();
-            var movimiento = colisionadorMonstruo.moveCharacter(boundMonstruo, dir, objetosColisionables);
-            monstruo.move(movimiento);
-            Vector3 rotation = new Vector3(0, (float)Math.Asin(dir.X), 0f);
-            this.monstruo.rotateY(-Geometry.RadianToDegree(rotation.Y - this.monstruo.Rotation.Y));
+            Vector3 dir = this.personaje.Position - this.monstruo.Position;
 
-            /*
-            //Detectar colisiones de BoundingBox utilizando herramienta TgcCollisionUtils
-            CollisionResult r = colisionadorMonstruo.Result;
-            //Si hubo colision, restaurar la posicion anterior
-            if (r.collisionFound)
-            {
-                float unAngulo = (float)Math.PI / 2;
-                dir = new Vector3((float)Math.Cos(unAngulo + monstruo.Rotation.Y), 0, (float)Math.Sin(unAngulo + monstruo.Rotation.Y));
-                dir.Normalize();
-                movimiento = colisionadorMonstruo.moveCharacter(boundMonstruo, dir, objetosColisionables);
-                monstruo.move(movimiento);
-            }*/
+            dir = new Vector3(dir.X, 0f, dir.Z);
+            dir.Normalize();
             
-    }
+            //var realMovement = colisionadorMonstruo.moveCharacter(boundMonstruo, dir, objetosColisionables);
+            monstruo.move(dir*ElapsedTime*velocidadMonstruo);
+            monstruo.playAnimation("Walk", true);
+            float angulo = (float)Math.Atan2(-dir.X, dir.Z);
+            monstruo.rotateY(anguloAnterior - angulo);
+            anguloAnterior = angulo;
+
+        }
+        private float velocidadMonstruo = 70f;
         public void logicaDelMonstruo(){
             if (persecucion) {
                 Vector3 pos = CheckpointHelper.checkpoints[0].Position;
                 pos.Y =  monstruo.Position.Y;
                 monstruo.Position = pos;
-                destinoMonstruo = true;
+                //boundMonstruo.setValues(monstruo.BoundingBox.calculateBoxCenter(), monstruo.BoundingBox.calculateAxisRadius());
+                avanzaPositivamente = true;
                 persecucion = false;
+                DestinoMonstruo = CheckpointHelper.checkpoints[0];
+
             }
             else
             {
@@ -701,23 +640,21 @@ namespace TGC.Group.Model
                     int actual = CheckpointHelper.checkpoints.FindIndex(c => c == DestinoMonstruo);
                     int proxPos = actual;
 
-                    if (actual == CheckpointHelper.checkpoints.Count - 1 && destinoMonstruo)
+                    if (actual == CheckpointHelper.checkpoints.Count - 1 && avanzaPositivamente)
                     {
-                        destinoMonstruo = false;
+                        avanzaPositivamente = false;
 
                     }
-                    if (actual == 0 && !destinoMonstruo) destinoMonstruo = true;
+                    if (actual == 0 && !avanzaPositivamente) avanzaPositivamente = true;
 
-                    if (destinoMonstruo) { proxPos++; } else { proxPos--; }
+                    if (avanzaPositivamente) { proxPos++; } else { proxPos--; }
 
                     var siguienteCheckPoint = CheckpointHelper.checkpoints[proxPos];
 
                     DestinoMonstruo = siguienteCheckPoint;
                     rotacionPorCambioDeDestino = true;
                 }
-                objetive = DestinoMonstruo.Position;
-
-                Vector3 dir = objetive - this.monstruo.Position;
+                Vector3 dir = DestinoMonstruo.Position - this.monstruo.Position;
 
                 dir = new Vector3(dir.X, 0f, dir.Z);
                 dir.Normalize();
@@ -727,14 +664,12 @@ namespace TGC.Group.Model
                     monstruo.rotateY(anguloAnterior - angulo);
                     anguloAnterior = angulo;
                 }
-                var realMovement = colisionadorMonstruo.moveCharacter(boundMonstruo, dir, objetosColisionables);
-                monstruo.move(realMovement);
+               // var realMovement = colisionadorMonstruo.moveCharacter(boundMonstruo, dir, objetosColisionables);
+                monstruo.move(dir*ElapsedTime* velocidadMonstruo);
                 monstruo.playAnimation("Walk", true);
             }
-            
-
-            //finDePartida = getFinDePartida();
         }
+        
         /*enum Estado { PERSIGUIENDO, PARADO, ATACANDO, MUERTO, ESQUIVANDO };
         Estado estado = Estado.PARADO;
         Vector3 direccionMovimiento;
