@@ -34,7 +34,7 @@ namespace TGC.Group.Model
         private CustomSprite barra;
         private float escalaActual = 0.45f;
         private bool escondido;
-
+        private bool persecucion = false;
         private bool finDePartida = false;
         private CustomSprite energia;
         private CustomSprite pantallaNegra;
@@ -64,7 +64,7 @@ namespace TGC.Group.Model
         private CustomSprite menu;
         private readonly List<Collider> objetosColisionables = new List<Collider>();
         private readonly List<Collider> armarios = new List<Collider>();
-        private readonly List<TgcMesh> puertas = new List<TgcMesh>();
+        private readonly List<Collider> puertas = new List<Collider>();
         private ElipsoidCollisionManager colisionadorMonstruo;
         private ElipsoidCollisionManager collisionManager;
         float larg = 4;
@@ -226,8 +226,9 @@ namespace TGC.Group.Model
                     if (mesh.Name.Contains("Puerta"))
                     {
                         mesh.AutoTransformEnable = true;
-                        puertas.Add(mesh);
-
+                        BoundingBoxCollider puerta = BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox);
+                        puertas.Add(puerta);
+                        
                     }
                     if (mesh.Name.Contains("Placard") || mesh.Name.Contains("Locker"))
                     {
@@ -354,12 +355,40 @@ namespace TGC.Group.Model
             puerta.Position = posicionVieja;
 
         }
-        private void controlDePuerta(TgcMesh mesh)
+        private float epsilon = 40f;
+        private void controlDePuerta(Collider puerta)
         {
-            if ((boundPersonaje.Center - mesh.Position).Length() < (boundPersonaje.Radius.Length() + larg))
+            if ((boundPersonaje.Center - puerta.BoundingSphere.Center).Length() < (boundPersonaje.Radius.Length() + puerta.BoundingSphere.Radius))
             {
+                //Traslado automático
+                Vector3 pos = boundPersonaje.Center - puerta.BoundingSphere.Center;
+                Vector3 traslado = new Vector3();
+                if (pos.Z > 0 && pos.X < epsilon && pos.X > 0)
+                {
+                    //resto
+                    traslado.Z = puerta.BoundingSphere.Center.Z - 30f;
+                    traslado.X = personaje.Position.X;
+                }
+                else if (pos.Z == 0)
+                {
+                    traslado.Z = personaje.Position.Z;
+                    if (pos.X < 0) {
+                        //sumo
+                        traslado.X = puerta.BoundingSphere.Center.X + 30f;
+                    } else {
+                        //resto
+                        traslado.X = puerta.BoundingSphere.Center.X - 30f;
+                    }
+                }
+                else {
+                    //resto
+                    traslado.Z = puerta.BoundingSphere.Center.Z + 30f;
+                    traslado.X = personaje.Position.X;
 
-                rotarPuerta(mesh);
+                }
+                traslado.Y = personaje.Position.Y;
+                personaje.Position = traslado;
+                boundPersonaje.setValues(personaje.BoundingBox.calculateBoxCenter(), personaje.BoundingBox.calculateAxisRadius());
             }
         }
         private void cargarSonido(string filePath)
@@ -385,7 +414,7 @@ namespace TGC.Group.Model
         {
             if (!flagGod && !escondido)
             {
-                var velocidadCaminar = 1.0f;
+                var velocidadCaminar = 2f;
                 var moveVector = new Vector3(0, 0, 0);
                 var moving = false;
                 if (Input.keyDown(Key.W))
@@ -436,23 +465,12 @@ namespace TGC.Group.Model
 
                 Camara.SetCamera(getOffset(), lookAt);
 
-                foreach (var puerta in puertas)
+                if (Input.keyPressed(Key.P))
                 {
-                    animacionDePuerta(puerta);
-                }
-
-                if (Input.keyDown(Key.E))
-                {
-                    foreach (var armario in armarios)
+                    foreach (var puerta in puertas)
                     {
-                        controlDeArmario(armario);
+                        controlDePuerta(puerta);
                     }
-                    if (escondido) { escondido = false; }
-                    else { escondido = false; };
-                }
-                foreach (var puerta in puertas)
-                {
-                    controlDePuerta(puerta);
                 }
                 this.getColisionContraObjetoCarga();
                 luz.consumir(ElapsedTime);
@@ -526,15 +544,31 @@ namespace TGC.Group.Model
                     Camara.SetCamera(pos.posicion, pos.lookAt);
                 }
                 else { moverPersonaje(); }
-
-                //animacionDePuerta();
-
+                /*
+                var dir = monstruo.Position - personaje.Position;
+                float distanciaAPersonaje = Vector3.Length(dir);
+                if (distanciaAPersonaje < 100f)
+                {
+                    persecucion = true;
+                    logicaPersecucion(dir);
+                }
+                else
+                {*/
                 logicaDelMonstruo();
 
                 if (Input.keyPressed(Key.C))
                 {
                     Clipboard.SetText(Clipboard.GetText() + String.Format(" checkpoints.Add(new Checkpoint(new Vector3({0}f, {1}f, {2}f) + origenMapa)); \n", Camara.Position.X - CheckpointHelper.origenMapa.X, 150 - CheckpointHelper.origenMapa.Y, Camara.Position.Z - CheckpointHelper.origenMapa.Z));
                     CheckpointHelper.checkpoints.Add(new Checkpoint(new Vector3(Camara.Position.X, 150, Camara.Position.Z)));
+                }
+                if (Input.keyDown(Key.E))
+                {
+                    foreach (var armario in armarios)
+                    {
+                        controlDeArmario(armario);
+                    }
+                    if (escondido) { escondido = false; }
+                    else { escondido = false; };
                 }
                 actualizarEnergia();
             }
@@ -636,61 +670,71 @@ namespace TGC.Group.Model
         {
             return (boundPersonaje.Center - boundMonstruo.Center).Length() < (boundPersonaje.Radius.Length() + boundMonstruo.Radius.Length());
         }
-        
-        public void logicaDelMonstruo()
+        private float anguloAnterior = (float)Math.PI / 2;
+        public void logicaPersecucion(Vector3 dir)
         {
-            //var monsterClosestCheckpoint = CheckpointHelper.GetClosestCheckPoint(monstruo.Position);
-            // var avatarClosestCheckpoint = CheckpointHelper.GetClosestCheckPoint(personaje.Position);
-            /*if (monsterClosestCheckpoint.Neighbors.Contains(avatarClosestCheckpoint) || avatarClosestCheckpoint == monsterClosestCheckpoint)
+            dir.Y = 0;
+            dir.Normalize();
+            var movimiento = colisionadorMonstruo.moveCharacter(boundMonstruo, dir, objetosColisionables);
+            monstruo.move(movimiento);
+            Vector3 rotation = new Vector3(0, (float)Math.Asin(dir.X), 0f);
+            this.monstruo.rotateY(-Geometry.RadianToDegree(rotation.Y - this.monstruo.Rotation.Y));
+
+            /*
+            //Detectar colisiones de BoundingBox utilizando herramienta TgcCollisionUtils
+            CollisionResult r = colisionadorMonstruo.Result;
+            //Si hubo colision, restaurar la posicion anterior
+            if (r.collisionFound)
             {
-                objetive = personaje.Position;
+                float unAngulo = (float)Math.PI / 2;
+                dir = new Vector3((float)Math.Cos(unAngulo + monstruo.Rotation.Y), 0, (float)Math.Sin(unAngulo + monstruo.Rotation.Y));
+                dir.Normalize();
+                movimiento = colisionadorMonstruo.moveCharacter(boundMonstruo, dir, objetosColisionables);
+                monstruo.move(movimiento);
+            }*/
+            
+    }
+        public void logicaDelMonstruo(){
+            if (persecucion) {
+                Vector3 pos = CheckpointHelper.checkpoints[0].Position;
+                pos.Y =  monstruo.Position.Y;
+                monstruo.Position = pos;
+                destinoMonstruo = true;
+                persecucion = false;
             }
             else
-            {*/
-            //Encontrar el algoritmo del camino más corto de un checkpoint al otro
-            // var nextCheckpoint = monsterClosestCheckpoint.Neighbors.First(c => c.CanArriveTo(avatarClosestCheckpoint));
-
-            float distanciaAlCheckPointDestino = Vector3.Length(DestinoMonstruo.Position - monstruo.Position);
-            bool rotacionPorCambioDeDestino = false;
-            if (distanciaAlCheckPointDestino < 100f)
             {
-                //Intercambio de checkpoint
-                int actual = CheckpointHelper.checkpoints.FindIndex(c => c == DestinoMonstruo);
-                int proxPos = actual;
-
-                if(actual==CheckpointHelper.checkpoints.Count-1)
+                float distanciaAlCheckPointDestino = Vector3.Length(DestinoMonstruo.Position - monstruo.Position);
+                bool rotacionPorCambioDeDestino = false;
+                if (distanciaAlCheckPointDestino < 100f)
                 {
-                    if(destinoMonstruo)
-                    {
-                        destinoMonstruo = false;
+                    //Intercambio de checkpoint
+                    int actual = CheckpointHelper.checkpoints.FindIndex(c => c == DestinoMonstruo);
+                    int proxPos = actual;
 
-                    }
-                    else
-                    {
-                        destinoMonstruo = true;
-                    }
+                    if (actual == CheckpointHelper.checkpoints.Count - 1 && destinoMonstruo) destinoMonstruo = false;
+                    if (actual == 0 && !destinoMonstruo) destinoMonstruo = true;
+
+                    if (destinoMonstruo) { proxPos++; } else { proxPos--; }
+
+                    var siguienteCheckPoint = CheckpointHelper.checkpoints[proxPos];
+
+                    DestinoMonstruo = siguienteCheckPoint;
+                    rotacionPorCambioDeDestino = true;
                 }
+                objetive = DestinoMonstruo.Position;
 
-                if (destinoMonstruo) { proxPos++; } else { proxPos--; }
+                Vector3 dir = objetive - this.monstruo.Position;
 
-                var siguienteCheckPoint = CheckpointHelper.checkpoints[proxPos];
+                dir = new Vector3(dir.X, 0f, dir.Z);
 
-                DestinoMonstruo = siguienteCheckPoint;
-                rotacionPorCambioDeDestino = true;
+
+                dir.Normalize();
+                if (rotacionPorCambioDeDestino) { float anguloNuevo = (float)Math.Atan2(dir.X, dir.Z); monstruo.rotateY(anguloNuevo); }
+                var realMovement = colisionadorMonstruo.moveCharacter(boundMonstruo, dir, objetosColisionables);
+                monstruo.move(realMovement);
+                monstruo.playAnimation("Walk", true);
             }
-            objetive = DestinoMonstruo.Position;
-
-            Vector3 dir = objetive - this.monstruo.Position;
-
-            dir = new Vector3(dir.X, 0f, dir.Z);
-            
-           
-            dir.Normalize();
-            if (rotacionPorCambioDeDestino) { float anguloNuevo = (float)Math.Atan2(dir.X, dir.Z); monstruo.rotateY(anguloNuevo); }
-            var realMovement = colisionadorMonstruo.moveCharacter(boundMonstruo, dir, objetosColisionables);
-            monstruo.move(realMovement);
-            monstruo.playAnimation("Walk", true);
-
             
 
             //finDePartida = getFinDePartida();

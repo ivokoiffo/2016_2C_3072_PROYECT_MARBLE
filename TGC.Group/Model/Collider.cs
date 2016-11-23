@@ -1,5 +1,6 @@
 ﻿using Microsoft.DirectX;
 using TGC.Core.BoundingVolumes;
+using TGC.Core.SceneLoader;
 
 namespace TGC.Group.Model
 {
