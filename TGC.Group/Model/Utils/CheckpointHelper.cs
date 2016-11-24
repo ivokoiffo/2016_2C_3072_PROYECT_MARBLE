@@ -115,8 +115,8 @@ namespace TGC.Group.Model.Utils
             checkpoints.Add(new Checkpoint(new Vector3(180f, 0f, 947f) + origenMapa));
             checkpoints.Add(new Checkpoint(new Vector3(180f, 0f, 1630f) + origenMapa));
             checkpoints.Add(new Checkpoint(new Vector3(712f, 0f, 1630f) + origenMapa));
-            checkpoints.Add(new Checkpoint(new Vector3(1195f, 0f, 1630f) + origenMapa));
-            checkpoints.Add(new Checkpoint(new Vector3(1195f, 0f, 1063f) + origenMapa));
+            checkpoints.Add(new Checkpoint(new Vector3(1203f, 0f, 1630f) + origenMapa));
+            checkpoints.Add(new Checkpoint(new Vector3(1203f, 0f, 1063f) + origenMapa));
 
             GenerateGraph();
         }

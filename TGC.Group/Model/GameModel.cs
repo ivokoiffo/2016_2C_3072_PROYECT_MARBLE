@@ -42,14 +42,13 @@ namespace TGC.Group.Model
         private List<BoundingBoxCollider> objetosRecarga = new List<BoundingBoxCollider>();
         private List<TgcMesh> meshEscenario = new List<TgcMesh>();
         private List<TgcMesh> meshRecarga = new List<TgcMesh>();
-        enum Estado { PERSIGUIENDO, CAMINANDO, ESQUIVANDO };
-        Estado estado = Estado.CAMINANDO;
         private Luz luz;
         private bool flagGod = false;
         private Matrix cameraRotation;
         private float leftrightRot;
         private CamaraGod camaraGod;
         private float updownRot;
+
         private TgcMp3Player mp3Player;
         private string currentFile;
         private TgcStaticSound sound;
@@ -68,12 +67,16 @@ namespace TGC.Group.Model
         float larg = 4;
         private Vector3 vectorOffset = new Vector3(0, 30, 0);
         private Vector3 direccionDePersecucion = new Vector3(0, 0, 0);
+        private bool colisionoMonstruoEnPersecucion = false;
+        float anguloAnterior = (float)Math.PI;
         private Checkpoint DestinoMonstruo { get; set; }
+        private bool avanzaPositivamente = true;
         private bool estaEnMenu = true;
         #region seteosVelocidades
-        private float velocidadMonstruo = 75f;
-        //private float velocidadPersonaje = 70f;
-        private float velocidadPersonaje = 200f;
+        private float velocidadMonstruo = 100f;
+        //private float velocidadMonstruo = 200f;
+
+        private float velocidadPersonaje = 95f;
 
         #endregion
 
@@ -110,9 +113,7 @@ namespace TGC.Group.Model
             personaje.AutoTransformEnable = true;
             personaje.Scale = new Vector3(1f, 1f, 1f);
             //INICIO DEL PERSONAJE COMENTADO
-            //personaje.Position = new Vector3(1269f, 79f, -354f);
-            personaje.Position = new Vector3(1100f, 80, 518);
-            //personaje.Position = new Vector3(1191.188f, 80, 1158.09f);   
+            personaje.Position = new Vector3(1269f, 79f, -354f);
             personaje.rotateY(Geometry.DegreeToRadian(180f));
             boundPersonaje = new TgcBoundingElipsoid(personaje.BoundingBox.calculateBoxCenter(), personaje.BoundingBox.calculateAxisRadius());
         }
@@ -472,7 +473,7 @@ namespace TGC.Group.Model
             drawer2D.EndDrawSprite();
         }
 
-        private bool avanzaPositivamente = true;
+        
         public override void Update()
         {
             PreUpdate();
@@ -509,8 +510,8 @@ namespace TGC.Group.Model
                 {
                     logicaDelMonstruo();
                 }
-                //DESCOMENTAR
-                //finDePartida = getFinDePartida();
+                
+                finDePartida = getFinDePartida();
                 if (Input.keyPressed(Key.E))
                 {
                     foreach (var armario in armarios)
@@ -584,8 +585,8 @@ namespace TGC.Group.Model
                 drawer2D.EndDrawSprite();
                 #region ComentoCheckPoint
                 DrawText.drawText("Checkpoint Id: " + DestinoMonstruo.id, 0, 40, Color.OrangeRed);
-                boundMonstruo.render();
-                boundPersonaje.render();
+                //boundMonstruo.render();
+                //boundPersonaje.render();
                 monstruo.animateAndRender(ElapsedTime);
                 CheckpointHelper.renderAll();
                 #endregion
@@ -614,7 +615,7 @@ namespace TGC.Group.Model
             //Finaliza el render y presenta en pantalla, al igual que el preRender se debe para casos puntuales es mejor utilizar a mano las operaciones de EndScene y PresentScene
             PostRender();
         }
-        float anguloAnterior = (float)Math.PI;
+       
 
         public override void Dispose()
         {
@@ -623,12 +624,11 @@ namespace TGC.Group.Model
             boundPersonaje.dispose();
             boundMonstruo.dispose();
         }
-        public Vector3 objective;
         private bool getFinDePartida()
         {
             return (boundPersonaje.Center - boundMonstruo.Center).Length() < (boundPersonaje.Radius.Length() + boundMonstruo.Radius.Length());
         }
-        private bool colisionoMonstruoEnPersecucion = false;
+        
         public void logicaPersecucion()
         {
             if (!colisionoMonstruoEnPersecucion) {
@@ -643,8 +643,6 @@ namespace TGC.Group.Model
             float angulo = (float)Math.Atan2(-direccionDePersecucion.X, direccionDePersecucion.Z);
             monstruo.rotateY(anguloAnterior - angulo);
             anguloAnterior = angulo;
-            //CollisionResult r = colisionadorMonstruo.Result;
-
             if (realMovement == new Vector3(0, 0, 0))
             {
                 colisionoMonstruoEnPersecucion = true;
@@ -704,38 +702,6 @@ namespace TGC.Group.Model
                 monstruo.playAnimation("Walk", true);
             }
         }
-
-        private void manejoDeEstadosDelMonstruo() {
-            switch (estado)
-            {
-                case Estado.CAMINANDO:
-                    break;
-                case Estado.ESQUIVANDO:
-                    break;
-                case Estado.PERSIGUIENDO:
-                    break;
-            }
-        }
-        /*detectarColisiones(objetos);
-
-
-                    //Si hubo colision, restaurar la posicion anterior
-                    if (collide)
-                    {
-                        estado = Estado.ESQUIVANDO;
-                        float unAngulo = (float)Math.PI / 2;
-                        direccionMovimiento = new Vector3((float)Math.Cos(unAngulo + monstruo.Rotation.Y), 0, (float)Math.Sin(unAngulo + monstruo.Rotation.Y));
-                        direccionMovimiento.Normalize();
-                        collide = false;
-                    }
-
-        */
-        private void detectarColisiones()
-        {
-            foreach (Collider objeto in objetosColisionables)
-            {
-              
-            }
-        }
+        
     }
 }
