@@ -17,7 +17,7 @@ namespace TGC.Group.Model
     {
         public Farol()
         {
-            VelocidadConsumo = 0.009f;
+            VelocidadConsumo = 1f;
             setMaximaEnergia();
         }
         public Farol(float velocidadConsumo)

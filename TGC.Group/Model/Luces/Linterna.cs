@@ -21,7 +21,7 @@ namespace TGC.Group.Model
         }
         public Linterna()
         {
-            VelocidadConsumo = 15f;
+            VelocidadConsumo = 100f;
             setMaximaEnergia();
         }
         public override void aplicarEfecto(TgcMesh mesh, Vector3 posicionCamara, Vector3 direccionLuz)

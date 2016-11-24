@@ -74,12 +74,11 @@ namespace TGC.Group.Model
         private Checkpoint DestinoMonstruo { get; set; }
         private bool avanzaPositivamente = true;
         private bool estaEnMenu = true;
+        #endregion
         #region seteosVelocidades
-        private float velocidadMonstruo = 100f;
-        //private float velocidadMonstruo = 200f;
-
-        private float velocidadPersonaje = 405f;
-        //private float velocidadPersonaje = 95f;
+        private float velocidadMonstruo = 105f;
+        private float velocidadPersonaje = 95f;
+        
 
         #endregion
         #region efectoAlarma
@@ -115,7 +114,6 @@ namespace TGC.Group.Model
 
         //Boleano para ver si dibujamos el boundingbox
         private bool BoundingBox { get; set; }
-        #endregion
         private void seteoDePersonaje()
         {
             //Cargar personaje con animaciones
@@ -449,7 +447,7 @@ namespace TGC.Group.Model
                 personaje.rotateY(Input.XposRelative * RotationSpeed);
 
                 //maximos para los giros del vectorDeView
-                if (-1f < updownRotPrevius && updownRotPrevius < 1f) { updownRot += Input.YposRelative * RotationSpeed; }
+                updownRot += Input.YposRelative * RotationSpeed;
 
                 cameraRotation = Matrix.RotationY(-leftrightRot) * Matrix.RotationX(-updownRot); //calcula la rotacion del vector de view
 
@@ -634,8 +632,8 @@ namespace TGC.Group.Model
             if (!estaEnMenu && !finDePartida)
             {
                 //DrawText.drawText("[G]-Habilita GodMod ", 0, 20, Color.OrangeRed);
-                DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(Camara.Position), 0, 150, Color.Blue);
-                DrawText.drawText(luz.getNombreYEnergia(), 0, 90, Color.Blue);
+                //DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(Camara.Position), 0, 150, Color.Blue);
+                //DrawText.drawText(luz.getNombreYEnergia(), 0, 90, Color.Blue);
                 drawer2D.BeginDrawSprite();
 
                 //Dibujar sprite (si hubiese mas, deberian ir todos aquí)
@@ -646,10 +644,8 @@ namespace TGC.Group.Model
                 drawer2D.EndDrawSprite();
                 #region ComentoCheckPoint
                 DrawText.drawText("Checkpoint Id: " + DestinoMonstruo.id, 0, 40, Color.OrangeRed);
-                //boundMonstruo.render();
-                //boundPersonaje.render();
-                
-                CheckpointHelper.renderAll();
+                //DESCOMENTAR PARA VER EL CAMINO
+                //CheckpointHelper.renderAll();
                 #endregion
                 if (!activoVisionNoctura)
                 {
@@ -741,7 +737,7 @@ namespace TGC.Group.Model
             else { colisionoMonstruoEnPersecucion = false; }
             efectoAlarma(true);
         }
-
+        
         private void efectoAlarma(bool activado)
         {
             pOldRT = D3DDevice.Instance.Device.GetRenderTarget(0);
@@ -758,9 +754,6 @@ namespace TGC.Group.Model
 
             //Liberar memoria de surface de Render Target
             pSurf.Dispose();
-
-            //Si quisieramos ver que se dibujo, podemos guardar el resultado a una textura en un archivo para debugear su resultado (ojo, es lento)
-            //TextureLoader.Save(this.ShadersDir + "render_target.bmp", ImageFileFormat.Bmp, renderTarget2D);
 
             //Ahora volvemos a restaurar el Render Target original (osea dibujar a la pantalla)
             D3DDevice.Instance.Device.SetRenderTarget(0, pOldRT);
