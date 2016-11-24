@@ -35,7 +35,7 @@ namespace TGC.Group.Model
         private TgcSkeletalMesh monstruo;
         private CustomSprite barra;
         private float escalaActual = 0.45f;
-        private bool escondido=false;
+        private bool escondido = false;
         private bool persecucion = false;
         private bool finDePartida = false;
         private CustomSprite energia;
@@ -92,6 +92,14 @@ namespace TGC.Group.Model
         private Texture renderTarget2D;
         private VertexBuffer screenQuadVB;
         #endregion
+        #region efectoNocturno
+        private Microsoft.DirectX.Direct3D.Effect otroEfecto;
+        private Surface g_pDepthStencil; // Depth-stencil buffer
+        private Texture g_pRenderTarget, g_pGlowMap, g_pRenderTarget4, g_pRenderTarget4Aux;
+        private VertexBuffer g_pVBV3D;
+        private readonly int cant_pasadas = 3;
+        private bool activoVisionNoctura = false;
+        #endregion
         public GameModel(string mediaDir, string shadersDir) : base(mediaDir, shadersDir)
         {
             Category = Game.Default.Category;
@@ -146,7 +154,7 @@ namespace TGC.Group.Model
             monstruo.Position = new Vector3(1208f, 82, 518f);
             //Escalamos el personaje 
             monstruo.Scale = new Vector3(1.5f, 1f, 1f);
-            
+
             monstruo.playAnimation("StandBy", true);
             boundMonstruo = new TgcBoundingElipsoid(monstruo.BoundingBox.calculateBoxCenter(), monstruo.BoundingBox.calculateAxisRadius());
 
@@ -191,7 +199,7 @@ namespace TGC.Group.Model
                         mesh.AutoTransformEnable = true;
                         BoundingBoxCollider puerta = BoundingBoxCollider.fromBoundingBox(mesh.BoundingBox);
                         puertas.Add(puerta);
-                        
+
                     }
                     if (mesh.Name.Contains("Placard") || mesh.Name.Contains("Locker"))
                     {
@@ -221,6 +229,7 @@ namespace TGC.Group.Model
             mp3Player = new TgcMp3Player();
             inicializarBarra();
             iniciliazarAlarma();
+            incializarVisionNoctura();
             luz = new Linterna();
         }
         private void incializarMenu()
@@ -246,7 +255,8 @@ namespace TGC.Group.Model
             energia.Scaling = new Vector2(escalaActual, 0.4f);
             energia.Position = new Vector2(22 + barra.Position.X, 16 + barra.Position.Y);
         }
-        private void inicializarPantallaNegra() {
+        private void inicializarPantallaNegra()
+        {
             pantallaNegra = new CustomSprite();
             pantallaNegra.Bitmap = new CustomBitmap(MediaDir + "\\pantallaNegra.png", D3DDevice.Instance.Device);
             var textureSize = pantallaNegra.Bitmap.Size;
@@ -262,8 +272,57 @@ namespace TGC.Group.Model
             Cursor.Position = new Point(D3DDevice.Instance.Device.Viewport.Width / 2, D3DDevice.Instance.Device.Viewport.Height / 2);
             RotationSpeed = 0.1f;
             viewVector = new Vector3(1, 0, 0);
+            Cursor.Hide();
         }
-        private void iniciliazarAlarma() {
+        private void incializarVisionNoctura() {
+            var d3dDevice = D3DDevice.Instance.Device;
+
+            otroEfecto = TgcShaders.loadEffect(ShadersDir + "GaussianBlur.fx");
+            //Configurar Technique dentro del shader
+            otroEfecto.Technique = "DefaultTechnique";
+
+            g_pDepthStencil = d3dDevice.CreateDepthStencilSurface(d3dDevice.PresentationParameters.BackBufferWidth,
+                d3dDevice.PresentationParameters.BackBufferHeight,
+                DepthFormat.D24S8, MultiSampleType.None, 0, true);
+
+            // inicializo el render target
+            g_pRenderTarget = new Texture(d3dDevice, d3dDevice.PresentationParameters.BackBufferWidth
+                , d3dDevice.PresentationParameters.BackBufferHeight, 1, Usage.RenderTarget,
+                Format.X8R8G8B8, Pool.Default);
+
+            g_pGlowMap = new Texture(d3dDevice, d3dDevice.PresentationParameters.BackBufferWidth
+                , d3dDevice.PresentationParameters.BackBufferHeight, 1, Usage.RenderTarget,
+                Format.X8R8G8B8, Pool.Default);
+
+            g_pRenderTarget4 = new Texture(d3dDevice, d3dDevice.PresentationParameters.BackBufferWidth / 4
+                , d3dDevice.PresentationParameters.BackBufferHeight / 4, 1, Usage.RenderTarget,
+                Format.X8R8G8B8, Pool.Default);
+
+            g_pRenderTarget4Aux = new Texture(d3dDevice, d3dDevice.PresentationParameters.BackBufferWidth / 4
+                , d3dDevice.PresentationParameters.BackBufferHeight / 4, 1, Usage.RenderTarget,
+                Format.X8R8G8B8, Pool.Default);
+
+            otroEfecto.SetValue("g_RenderTarget", g_pRenderTarget);
+
+            // Resolucion de pantalla
+            otroEfecto.SetValue("screen_dx", d3dDevice.PresentationParameters.BackBufferWidth);
+            otroEfecto.SetValue("screen_dy", d3dDevice.PresentationParameters.BackBufferHeight);
+
+            CustomVertex.PositionTextured[] vertices =
+            {
+                new CustomVertex.PositionTextured(-1, 1, 1, 0, 0),
+                new CustomVertex.PositionTextured(1, 1, 1, 1, 0),
+                new CustomVertex.PositionTextured(-1, -1, 1, 0, 1),
+                new CustomVertex.PositionTextured(1, -1, 1, 1, 1)
+            };
+            //vertex buffer de los triangulos
+            g_pVBV3D = new VertexBuffer(typeof(CustomVertex.PositionTextured),
+                4, d3dDevice, Usage.Dynamic | Usage.WriteOnly,
+                CustomVertex.PositionTextured.Format, Pool.Default);
+            g_pVBV3D.SetData(vertices, 0, LockFlags.None);
+        }
+        private void iniciliazarAlarma()
+        {
             CustomVertex.PositionTextured[] screenQuadVertices =
             {
                 new CustomVertex.PositionTextured(-1, 1, 1, 0, 0),
@@ -314,82 +373,18 @@ namespace TGC.Group.Model
         {
             return personaje.Position + vectorOffset;
         }
-        private void animacionDePuerta(TgcMesh unMesh)
-        {
-
-            if (Input.keyPressed(Key.U))
-            {
-
-                if (rot >= 1.57)
-                {
-                    rot = 1.57;
-                    variacion = -0.9 * ElapsedTime;
-                };
-                if (rot <= 0)
-                {
-                    rot = 0;
-                    variacion = 0.9 * ElapsedTime;
-                };
-                rot += variacion;
-                var ang = System.Convert.ToSingle(rot);
-
-                unMesh.rotateY(ang);
-                unMesh.move(new Vector3(System.Convert.ToSingle((larg - (Math.Cos(rot + 3.14) * larg))), 0, System.Convert.ToSingle(Math.Sin(rot + 3.14) * larg)));
-
-                //Si superamos cierto Y volvemos a la posición original.
-                //if (Camara.Position.Y > 300f)
-                // {
-                //     Camara.SetCamera(new Vector3(Camara.Position.X, 0f, Camara.Position.Z), Camara.LookAt);
-                //  }
-            }
-
-        }
         private void controlDeArmario(Collider mesh)
         {
             if ((boundPersonaje.Center - mesh.BoundingSphere.Center).Length() < (boundPersonaje.Radius.Length() + mesh.BoundingSphere.Radius))
             {
                 escondido = true;
-                viewVector = new Vector3(-1,0,0);
-                Camara.SetCamera(mesh.BoundingSphere.Center + new Vector3(10,10,10) , lookAt * -1);
+                viewVector = new Vector3(-1, 0, 0);
+                Camara.SetCamera(mesh.BoundingSphere.Center + new Vector3(10, 10, 10), lookAt * -1);
             }
         }
 
         private float epsilon = 40f;
-        private void controlDePuerta(Collider puerta)
-        {
-            if ((boundPersonaje.Center - puerta.BoundingSphere.Center).Length() < (boundPersonaje.Radius.Length() + puerta.BoundingSphere.Radius))
-            {
-                //Traslado automático
-                Vector3 pos = boundPersonaje.Center - puerta.BoundingSphere.Center;
-                Vector3 traslado = new Vector3();
-                if (pos.Z > 0 && pos.X < epsilon && pos.X > 0)
-                {
-                    //resto
-                    traslado.Z = puerta.BoundingSphere.Center.Z - 30f;
-                    traslado.X = personaje.Position.X;
-                }
-                else if (pos.Z == 0)
-                {
-                    traslado.Z = personaje.Position.Z;
-                    if (pos.X < 0) {
-                        //sumo
-                        traslado.X = puerta.BoundingSphere.Center.X + 30f;
-                    } else {
-                        //resto
-                        traslado.X = puerta.BoundingSphere.Center.X - 30f;
-                    }
-                }
-                else {
-                    //resto
-                    traslado.Z = puerta.BoundingSphere.Center.Z + 30f;
-                    traslado.X = personaje.Position.X;
-
-                }
-                traslado.Y = personaje.Position.Y;
-                personaje.Position = traslado;
-                boundPersonaje.setValues(personaje.BoundingBox.calculateBoxCenter(), personaje.BoundingBox.calculateAxisRadius());
-            }
-        }
+        
         private void cargarSonido(string filePath)
         {
             filePath = MediaDir + filePath;
@@ -409,7 +404,7 @@ namespace TGC.Group.Model
                 sound.loadSound(currentFile, DirectSound.DsDevice);
             }
         }
-        public void moverPersonaje() 
+        public void moverPersonaje()
         {
             if (!flagGod)
             {
@@ -466,7 +461,7 @@ namespace TGC.Group.Model
                 {
                     var realMovement = collisionManager.moveCharacter(boundPersonaje, movementVector * ElapsedTime, objetosColisionables);
                     personaje.move(realMovement);
-                
+
                     lookAt = Vector3.Add(getOffset(), direccionLookAt); //vector lookAt final
 
                     Camara.SetCamera(getOffset(), lookAt);
@@ -506,13 +501,13 @@ namespace TGC.Group.Model
                         {
                             case "Vela":
                                 luz = new Vela();
-                            break;
+                                break;
                             case "Linterna":
                                 luz = new Linterna();
-                            break;
+                                break;
                             case "Farol":
                                 luz = new Farol();
-                            break;
+                                break;
                         }
                     }
                     meshEscenario.Remove(recarga.mesh);
@@ -521,13 +516,14 @@ namespace TGC.Group.Model
             objetosRecarga.Remove(re);
         }
 
-        private void ponerPantallaEnNegro() {
+        private void ponerPantallaEnNegro()
+        {
             drawer2D.BeginDrawSprite();
             drawer2D.DrawSprite(pantallaNegra);
             drawer2D.EndDrawSprite();
         }
 
-        
+
         public override void Update()
         {
             PreUpdate();
@@ -552,8 +548,8 @@ namespace TGC.Group.Model
                     Camara.SetCamera(pos.posicion, pos.lookAt);
                 }
                 else { moverPersonaje(); }
-                
-                Vector3 dir =  this.monstruo.Position - this.personaje.Position;
+
+                Vector3 dir = this.monstruo.Position - this.personaje.Position;
                 float distanciaAPersonaje = Vector3.Length(dir);
                 if (distanciaAPersonaje < 300f && !escondido)
                 {
@@ -564,7 +560,7 @@ namespace TGC.Group.Model
                 {
                     logicaDelMonstruo();
                 }
-                
+
                 finDePartida = getFinDePartida();
                 if (Input.keyPressed(Key.E))
                 {
@@ -581,6 +577,17 @@ namespace TGC.Group.Model
                         escondido = false;
                     }
                 }
+
+                if (Input.keyPressed(Key.V))
+                {
+                    activoVisionNoctura = true;
+                }
+                if (Input.keyUp(Key.V))
+                {
+                    activoVisionNoctura = false;
+                }
+
+
                 actualizarEnergia();
             }
             if (estaEnMenu && Input.keyPressed(Key.Space))
@@ -625,7 +632,8 @@ namespace TGC.Group.Model
                 DrawText.changeFont(font);
                 DrawText.drawText("HAS PERDIDO", D3DDevice.Instance.Width / 2, D3DDevice.Instance.Height / 2, Color.OrangeRed);
             }
-            if(!estaEnMenu && !finDePartida){
+            if (!estaEnMenu && !finDePartida)
+            {
                 //DrawText.drawText("[G]-Habilita GodMod ", 0, 20, Color.OrangeRed);
                 DrawText.drawText("Posicion camara actual: " + TgcParserUtils.printVector3(Camara.Position), 0, 150, Color.Blue);
                 DrawText.drawText(luz.getNombreYEnergia(), 0, 90, Color.Blue);
@@ -634,7 +642,7 @@ namespace TGC.Group.Model
                 //Dibujar sprite (si hubiese mas, deberian ir todos aquí)
                 drawer2D.DrawSprite(barra);
                 drawer2D.DrawSprite(energia);
-               
+
                 //Finalizar el dibujado de Sprites
                 drawer2D.EndDrawSprite();
                 #region ComentoCheckPoint
@@ -644,32 +652,40 @@ namespace TGC.Group.Model
                 monstruo.animateAndRender(ElapsedTime);
                 CheckpointHelper.renderAll();
                 #endregion
-                
-                foreach (var mesh in meshEscenario)
+                if (!activoVisionNoctura)
                 {
-                    //Nos ocupamos solo de las mallas habilitadas
-                    if (mesh.Enabled)
+                    foreach (var mesh in meshEscenario)
                     {
-                        //Solo mostrar la malla si colisiona contra el Frustum
-                        var r = TgcCollisionUtils.classifyFrustumAABB(Frustum, mesh.BoundingBox);
-                        if (r != TgcCollisionUtils.FrustumResult.OUTSIDE)
+                        //Nos ocupamos solo de las mallas habilitadas
+                        if (mesh.Enabled)
                         {
-                            if (flagGod) { luz.deshabilitarEfecto(mesh); }
-                            else
+                            //Solo mostrar la malla si colisiona contra el Frustum
+                            var r = TgcCollisionUtils.classifyFrustumAABB(Frustum, mesh.BoundingBox);
+                            if (r != TgcCollisionUtils.FrustumResult.OUTSIDE)
                             {
-                                luz.aplicarEfecto(mesh, Camara.Position, direccionLookAt);
-                            }
-                            mesh.render();
+                                if (flagGod)
+                                {
+                                    luz.deshabilitarEfecto(mesh);
+                                }
+                                else
+                                {
+                                    luz.aplicarEfecto(mesh, Camara.Position, direccionLookAt);
+                                }
+                                mesh.render();
 
+                            }
                         }
                     }
                 }
-              
+                else {
+                    visionNoctura();
+                    D3DDevice.Instance.Device.BeginScene();
+                }
             }
             //Finaliza el render y presenta en pantalla, al igual que el preRender se debe para casos puntuales es mejor utilizar a mano las operaciones de EndScene y PresentScene
             PostRender();
         }
-       
+
 
         public override void Dispose()
         {
@@ -682,15 +698,16 @@ namespace TGC.Group.Model
         {
             return (boundPersonaje.Center - boundMonstruo.Center).Length() < (boundPersonaje.Radius.Length() + boundMonstruo.Radius.Length());
         }
-        
+
         public void logicaPersecucion()
         {
-            if (!colisionoMonstruoEnPersecucion) {
+            if (!colisionoMonstruoEnPersecucion)
+            {
                 direccionDePersecucion = this.personaje.Position - this.monstruo.Position;
                 direccionDePersecucion = new Vector3(direccionDePersecucion.X, 0f, direccionDePersecucion.Z);
                 direccionDePersecucion.Normalize();
             }
-            var realMovement = colisionadorMonstruo.moveCharacter(boundMonstruo, direccionDePersecucion * ElapsedTime*velocidadMonstruo, objetosColisionables);
+            var realMovement = colisionadorMonstruo.moveCharacter(boundMonstruo, direccionDePersecucion * ElapsedTime * velocidadMonstruo, objetosColisionables);
             monstruo.move(realMovement);
             cargarSonido("grito.wav");
             sound.play();
@@ -735,9 +752,9 @@ namespace TGC.Group.Model
             D3DDevice.Instance.Device.DepthStencilSurface = depthStencilOld;
 
             //Luego tomamos lo dibujado antes y lo combinamos con una textura con efecto de alarma
-            drawPostProcess(ElapsedTime,activado);
+            drawPostProcess(ElapsedTime, activado);
         }
-        private void drawPostProcess(float elapsedTime,bool activado)
+        private void drawPostProcess(float elapsedTime, bool activado)
         {
             //Arrancamos la escena
             D3DDevice.Instance.Device.BeginScene();
@@ -772,12 +789,14 @@ namespace TGC.Group.Model
             D3DDevice.Instance.Device.EndScene();
             D3DDevice.Instance.Device.Present();
         }
-        public void logicaDelMonstruo(){
+        public void logicaDelMonstruo()
+        {
             cargarSonido("pisada.wav");
             mp3Player.resume();
-            if (persecucion) {
+            if (persecucion)
+            {
                 Vector3 pos = CheckpointHelper.checkpoints[0].Position;
-                pos.Y =  monstruo.Position.Y;
+                pos.Y = monstruo.Position.Y;
                 monstruo.Position = pos;
                 boundMonstruo.setValues(monstruo.BoundingBox.calculateBoxCenter(), monstruo.BoundingBox.calculateAxisRadius());
                 avanzaPositivamente = true;
@@ -814,8 +833,9 @@ namespace TGC.Group.Model
                 dir = new Vector3(dir.X, 0f, dir.Z);
                 dir.Normalize();
 
-                if (rotacionPorCambioDeDestino) {
-                    float angulo = (float)Math.Atan2( -dir.X, dir.Z);
+                if (rotacionPorCambioDeDestino)
+                {
+                    float angulo = (float)Math.Atan2(-dir.X, dir.Z);
                     monstruo.rotateY(anguloAnterior - angulo);
                     anguloAnterior = angulo;
                 }
@@ -824,6 +844,238 @@ namespace TGC.Group.Model
                 monstruo.playAnimation("Walk", true);
             }
         }
-        
-    }
+
+        /*
+        private void animacionDePuerta(Collider puerta)
+        {
+                if (rot >= 1.57)
+                {
+                    rot = 1.57;
+                    variacion = -0.9 * ElapsedTime;
+                };
+                if (rot <= 0)
+                {
+                    rot = 0;
+                    variacion = 0.9 * ElapsedTime;
+                };
+                rot += variacion;
+                var ang = System.Convert.ToSingle(rot);
+
+                unMesh.rotateY(ang);
+                puerta.BoundingSphere.move(new Vector3(System.Convert.ToSingle((larg - (Math.Cos(rot + 3.14) * larg))), 0, System.Convert.ToSingle(Math.Sin(rot + 3.14) * larg)));
+        }
+
+
+        public void rotarPuerta(TgcMesh puerta)
+        {
+            Vector3 posicionVieja = puerta.Position;
+            puerta.Position = new Vector3(puerta.Position.X, 0, puerta.Position.Z);
+            float angIntermedio = angInicial * (1.0f - delta) + angFinal * delta;
+            puerta.rotateY(angIntermedio);
+            puerta.Position = posicionVieja;
+
+        }*/
+        private bool animado = false;
+        private void controlDePuerta(Collider puerta)
+        {
+            if ((boundPersonaje.Center - puerta.BoundingSphere.Center).Length() < (boundPersonaje.Radius.Length() + puerta.BoundingSphere.Radius))
+            {
+                //animacionDePuerta();
+                if (!animado)
+                {
+                    //Traslado automático
+                    Vector3 pos = boundPersonaje.Center - puerta.BoundingSphere.Center;
+                    Vector3 traslado = new Vector3();
+                    if (pos.Z > 0 && pos.X < epsilon && pos.X > 0)
+                    {
+                        //resto
+                        traslado.Z = puerta.BoundingSphere.Center.Z - 30f;
+                        traslado.X = personaje.Position.X;
+                    }
+                    else if (pos.Z == 0)
+                    {
+                        traslado.Z = personaje.Position.Z;
+                        if (pos.X < 0)
+                        {
+                            //sumo
+                            traslado.X = puerta.BoundingSphere.Center.X + 30f;
+                        }
+                        else
+                        {
+                            //resto
+                            traslado.X = puerta.BoundingSphere.Center.X - 30f;
+                        }
+                    }
+                    else
+                    {
+                        //resto
+                        traslado.Z = puerta.BoundingSphere.Center.Z + 30f;
+                        traslado.X = personaje.Position.X;
+
+                    }
+                    traslado.Y = personaje.Position.Y;
+                    personaje.Position = traslado;
+                    boundPersonaje.setValues(personaje.BoundingBox.calculateBoxCenter(), personaje.BoundingBox.calculateAxisRadius());
+                }
+            }
+        }
+
+
+        private void visionNoctura()
+        {
+
+           // dibujo la escena una textura
+           otroEfecto.Technique = "DefaultTechnique";
+           // guardo el Render target anterior y seteo la textura como render target
+           var pOldRT = D3DDevice.Instance.Device.GetRenderTarget(0);
+           var pSurf = g_pRenderTarget.GetSurfaceLevel(0);
+            D3DDevice.Instance.Device.SetRenderTarget(0, pSurf);
+           // hago lo mismo con el depthbuffer, necesito el que no tiene multisampling
+           var pOldDS = D3DDevice.Instance.Device.DepthStencilSurface;
+            D3DDevice.Instance.Device.DepthStencilSurface = g_pDepthStencil;
+            D3DDevice.Instance.Device.Clear(ClearFlags.Target | ClearFlags.ZBuffer, Color.Black, 1.0f, 0);
+            //Dibujamos todos los meshes del escenario
+            renderScene("DefaultTechnique");
+            //Render personames enemigos
+
+            D3DDevice.Instance.Device.EndScene();
+
+           pSurf.Dispose();
+
+           // dibujo el glow map
+           otroEfecto.Technique = "DefaultTechnique";
+           pSurf = g_pGlowMap.GetSurfaceLevel(0);
+            D3DDevice.Instance.Device.SetRenderTarget(0, pSurf);
+            D3DDevice.Instance.Device.Clear(ClearFlags.Target | ClearFlags.ZBuffer, Color.Black, 1.0f, 0);
+
+            D3DDevice.Instance.Device.BeginScene();
+
+            //Dibujamos SOLO los meshes que tienen glow brillantes
+            //Render personaje brillante
+            //Render personames enemigos
+            monstruo.render();
+           // El resto opacos
+           renderScene("DibujarObjetosOscuros");
+
+            D3DDevice.Instance.Device.EndScene();
+
+           pSurf.Dispose();
+
+           // Hago un blur sobre el glow map
+           // 1er pasada: downfilter x 4
+           // -----------------------------------------------------
+           pSurf = g_pRenderTarget4.GetSurfaceLevel(0);
+            D3DDevice.Instance.Device.SetRenderTarget(0, pSurf);
+
+            D3DDevice.Instance.Device.BeginScene();
+           otroEfecto.Technique = "DownFilter4";
+            D3DDevice.Instance.Device.VertexFormat = CustomVertex.PositionTextured.Format;
+            D3DDevice.Instance.Device.SetStreamSource(0, g_pVBV3D, 0);
+           otroEfecto.SetValue("g_RenderTarget", g_pGlowMap);
+
+            D3DDevice.Instance.Device.Clear(ClearFlags.Target | ClearFlags.ZBuffer, Color.Black, 1.0f, 0);
+           otroEfecto.Begin(FX.None);
+           otroEfecto.BeginPass(0);
+            D3DDevice.Instance.Device.DrawPrimitives(PrimitiveType.TriangleStrip, 0, 2);
+           otroEfecto.EndPass();
+           otroEfecto.End();
+           pSurf.Dispose();
+
+            D3DDevice.Instance.Device.EndScene();
+
+            D3DDevice.Instance.Device.DepthStencilSurface = pOldDS;
+
+           // Pasadas de blur
+           for (var P = 0; P < cant_pasadas; ++P)
+           {
+               // Gaussian blur Horizontal
+               // -----------------------------------------------------
+               pSurf = g_pRenderTarget4Aux.GetSurfaceLevel(0);
+                D3DDevice.Instance.Device.SetRenderTarget(0, pSurf);
+                // dibujo el quad pp dicho :
+
+                D3DDevice.Instance.Device.BeginScene();
+               otroEfecto.Technique = "GaussianBlurSeparable";
+                D3DDevice.Instance.Device.VertexFormat = CustomVertex.PositionTextured.Format;
+                D3DDevice.Instance.Device.SetStreamSource(0, g_pVBV3D, 0);
+               otroEfecto.SetValue("g_RenderTarget", g_pRenderTarget4);
+
+                D3DDevice.Instance.Device.Clear(ClearFlags.Target | ClearFlags.ZBuffer, Color.Black, 1.0f, 0);
+               otroEfecto.Begin(FX.None);
+               otroEfecto.BeginPass(0);
+                D3DDevice.Instance.Device.DrawPrimitives(PrimitiveType.TriangleStrip, 0, 2);
+               otroEfecto.EndPass();
+               otroEfecto.End();
+               pSurf.Dispose();
+
+                D3DDevice.Instance.Device.EndScene();
+
+               pSurf = g_pRenderTarget4.GetSurfaceLevel(0);
+                D3DDevice.Instance.Device.SetRenderTarget(0, pSurf);
+               pSurf.Dispose();
+
+                //  Gaussian blur Vertical
+                // -----------------------------------------------------
+
+                D3DDevice.Instance.Device.BeginScene();
+               otroEfecto.Technique = "GaussianBlurSeparable";
+                D3DDevice.Instance.Device.VertexFormat = CustomVertex.PositionTextured.Format;
+                D3DDevice.Instance.Device.SetStreamSource(0, g_pVBV3D, 0);
+               otroEfecto.SetValue("g_RenderTarget", g_pRenderTarget4Aux);
+
+                D3DDevice.Instance.Device.Clear(ClearFlags.Target | ClearFlags.ZBuffer, Color.Black, 1.0f, 0);
+               otroEfecto.Begin(FX.None);
+               otroEfecto.BeginPass(1);
+                D3DDevice.Instance.Device.DrawPrimitives(PrimitiveType.TriangleStrip, 0, 2);
+               otroEfecto.EndPass();
+               otroEfecto.End();
+
+                D3DDevice.Instance.Device.EndScene();
+           }
+
+            //  To Gray Scale
+            // -----------------------------------------------------
+            // Ultima pasada vertical va sobre la pantalla pp dicha
+            D3DDevice.Instance.Device.SetRenderTarget(0, pOldRT);
+            //pSurf = g_pRenderTarget4Aux.GetSurfaceLevel(0);
+            //device.SetRenderTarget(0, pSurf);
+
+            D3DDevice.Instance.Device.BeginScene();
+
+           otroEfecto.Technique = "GrayScale";
+            D3DDevice.Instance.Device.VertexFormat = CustomVertex.PositionTextured.Format;
+            D3DDevice.Instance.Device.SetStreamSource(0, g_pVBV3D, 0);
+           otroEfecto.SetValue("g_RenderTarget", g_pRenderTarget);
+           otroEfecto.SetValue("g_GlowMap", g_pRenderTarget4Aux);
+            D3DDevice.Instance.Device.Clear(ClearFlags.Target | ClearFlags.ZBuffer, Color.Black, 1.0f, 0);
+           otroEfecto.Begin(FX.None);
+           otroEfecto.BeginPass(0);
+            D3DDevice.Instance.Device.DrawPrimitives(PrimitiveType.TriangleStrip, 0, 2);
+           otroEfecto.EndPass();
+           otroEfecto.End();
+
+            D3DDevice.Instance.Device.EndScene();
+            
+        }
+        public void renderScene(string Technique)
+        {
+            //Dibujamos todos los meshes del escenario
+            foreach (var m in meshEscenario)
+            {
+                //Nos ocupamos solo de las mallas habilitadas
+                if (m.Enabled)
+                {
+                    //Solo mostrar la malla si colisiona contra el Frustum
+                    var r = TgcCollisionUtils.classifyFrustumAABB(Frustum, m.BoundingBox);
+                    if (r != TgcCollisionUtils.FrustumResult.OUTSIDE)
+                    {
+                        m.Effect = otroEfecto;
+                        m.Technique = Technique;
+                        m.UpdateMeshTransform();
+                        m.render();
+                    }
+                }
+            }
+        }
+    } 
 }
