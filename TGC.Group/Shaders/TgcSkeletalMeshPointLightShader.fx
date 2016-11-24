@@ -189,6 +189,10 @@ technique VERTEX_COLOR
 /* DIFFUSE_MAP */
 /**************************************************************************************/
 
+//Parametros de Spot
+float3 spotLightDir; //Direccion del cono de luz
+float spotLightAngleCos; //Angulo de apertura del cono de luz (en radianes)
+float spotLightExponent; //Exponente de atenuacion dentro del cono de luz
 //Input del Vertex Shader
 struct VS_INPUT_DIFFUSE_MAP
 {
@@ -296,8 +300,14 @@ float4 ps_DiffuseMap(PS_DIFFUSE_MAP input) : COLOR0
 
 	//Calcular intensidad de luz, con atenuacion por distancia
 	float distAtten = length(lightPosition.xyz - input.WorldPosition) * lightAttenuation;
-	float intensity = lightIntensity / distAtten; //Dividimos intensidad sobre distancia (lo hacemos lineal pero tambien podria ser i/d^2)
+	
+	float spotAtten = dot(-spotLightDir, Ln);
+	
+	spotAtten = (spotAtten > spotLightAngleCos)
+					? pow(spotAtten, spotLightExponent)
+					: 0.0;
 
+	float intensity = lightIntensity*spotAtten / distAtten; //Dividimos intensidad sobre distancia (lo hacemos lineal pero tambien podria ser i/d^2)
 	//Obtener texel de la textura
 	float4 texelColor = tex2D(diffuseMap, input.Texcoord);
 

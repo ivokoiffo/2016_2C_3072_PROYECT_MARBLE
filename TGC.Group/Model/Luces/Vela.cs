@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using TGC.Core.SceneLoader;
 using TGC.Core.Shaders;
 using TGC.Core.Utils;
+using TGC.Core.SkeletalAnimation;
 
 namespace TGC.Group.Model
 {
@@ -64,6 +65,28 @@ namespace TGC.Group.Model
         public override string descripcion()
         {
             return "Vela";
+        }
+
+        public override void aplicarEfecto(TgcSkeletalMesh mesh, Vector3 posicionCamara, Vector3 direccionLuz)
+        {
+            mesh.Effect = TgcShaders.Instance.TgcSkeletalMeshPointLightShader;
+            //El Technique depende del tipo RenderType del mesh
+            mesh.Technique = "DIFFUSE_MAP";
+            mesh.Effect.SetValue("lightColor", ColorValue.FromColor(Color.FromArgb(0, 255, 113, 45)));
+            mesh.Effect.SetValue("lightPosition", TgcParserUtils.vector3ToFloat4Array(posicionCamara));
+            mesh.Effect.SetValue("eyePosition", TgcParserUtils.vector3ToFloat4Array(posicionCamara));
+            mesh.Effect.SetValue("lightIntensity", Energia);
+            mesh.Effect.SetValue("lightAttenuation", 0.004f);
+            mesh.Effect.SetValue("spotLightDir", TgcParserUtils.vector3ToFloat3Array(direccionLuz));
+            mesh.Effect.SetValue("spotLightAngleCos", FastMath.ToRad(50f));
+            mesh.Effect.SetValue("spotLightExponent", 25f);
+
+            //Cargar variables de shader de Material. El Material en realidad deberia ser propio de cada mesh. Pero en este ejemplo se simplifica con uno comun para todos
+            mesh.Effect.SetValue("materialEmissiveColor", ColorValue.FromColor(Color.Black));
+            mesh.Effect.SetValue("materialAmbientColor", ColorValue.FromColor(Color.FromArgb(0, 255, 113, 45)));
+            mesh.Effect.SetValue("materialDiffuseColor", ColorValue.FromColor(Color.White));
+            mesh.Effect.SetValue("materialSpecularColor", ColorValue.FromColor(Color.FromArgb(0, 255, 113, 45)));
+            mesh.Effect.SetValue("materialSpecularExp", 10000f);
         }
     }
 }

@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TGC.Core.SceneLoader;
 using TGC.Core.Shaders;
+using TGC.Core.SkeletalAnimation;
 using TGC.Core.Utils;
 namespace TGC.Group.Model
 {
@@ -24,12 +25,17 @@ namespace TGC.Group.Model
         public float Nombre { get;}
         public float VelocidadConsumo { get; set; }
         abstract public string descripcion();
+        abstract public void aplicarEfecto(TgcSkeletalMesh mesh, Vector3 posicionCamara, Vector3 direccionLuz);
         abstract public void aplicarEfecto(TgcMesh mesh,Vector3 posicionCamara, Vector3 direccionLuz);
         public void deshabilitarEfecto(TgcMesh mesh) {
             mesh.Effect = TgcShaders.Instance.TgcMeshShader;
             mesh.Technique = TgcShaders.Instance.getTgcMeshTechnique(TgcMesh.MeshRenderType.DIFFUSE_MAP);
         }
-
+        public void deshabilitarEfecto(TgcSkeletalMesh mesh)
+        {
+            mesh.Effect = TgcShaders.Instance.TgcSkeletalMeshShader;
+            mesh.Technique = TgcShaders.Instance.getTgcSkeletalMeshTechnique(mesh.RenderType);
+        }
         public void consumir(float tiempo)
         {
             float ener = 0;

@@ -212,7 +212,6 @@ namespace TGC.Group.Model
                 }
                 meshEscenario.Add(mesh);
             }
-
             CheckpointHelper.BuildCheckpoints();
             DestinoMonstruo = CheckpointHelper.checkpoints[0];
 
@@ -649,7 +648,7 @@ namespace TGC.Group.Model
                 DrawText.drawText("Checkpoint Id: " + DestinoMonstruo.id, 0, 40, Color.OrangeRed);
                 //boundMonstruo.render();
                 //boundPersonaje.render();
-                monstruo.animateAndRender(ElapsedTime);
+                
                 CheckpointHelper.renderAll();
                 #endregion
                 if (!activoVisionNoctura)
@@ -672,10 +671,26 @@ namespace TGC.Group.Model
                                     luz.aplicarEfecto(mesh, Camara.Position, direccionLookAt);
                                 }
                                 mesh.render();
+                            }
+                        }
 
+                    }
+                    if (monstruo.Enabled)
+                    {
+                        var r = TgcCollisionUtils.classifyFrustumAABB(Frustum, monstruo.BoundingBox);
+                        if (r != TgcCollisionUtils.FrustumResult.OUTSIDE)
+                        {
+                            if (flagGod)
+                            {
+                                luz.deshabilitarEfecto(monstruo);
+                            }
+                            else
+                            {
+                                luz.aplicarEfecto(monstruo, Camara.Position, direccionLookAt);
                             }
                         }
                     }
+                    monstruo.animateAndRender(ElapsedTime);
                 }
                 else {
                     visionNoctura();
