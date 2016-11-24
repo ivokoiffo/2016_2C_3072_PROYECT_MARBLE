@@ -42,7 +42,8 @@ namespace TGC.Group.Model
         private List<BoundingBoxCollider> objetosRecarga = new List<BoundingBoxCollider>();
         private List<TgcMesh> meshEscenario = new List<TgcMesh>();
         private List<TgcMesh> meshRecarga = new List<TgcMesh>();
-
+        enum Estado { PERSIGUIENDO, CAMINANDO, ESQUIVANDO };
+        Estado estado = Estado.CAMINANDO;
         private Luz luz;
         private bool flagGod = false;
         private Matrix cameraRotation;
@@ -66,7 +67,7 @@ namespace TGC.Group.Model
         private ElipsoidCollisionManager collisionManager;
         float larg = 4;
         private Vector3 vectorOffset = new Vector3(0, 30, 0);
-
+        private Vector3 direccionDePersecucion = new Vector3(0, 0, 0);
         private Checkpoint DestinoMonstruo { get; set; }
         private bool estaEnMenu = true;
         #region seteosVelocidades
@@ -497,7 +498,7 @@ namespace TGC.Group.Model
                 }
                 else { moverPersonaje(); }
                 
-                var dir = monstruo.Position - personaje.Position;
+                Vector3 dir =  this.monstruo.Position - this.personaje.Position;
                 float distanciaAPersonaje = Vector3.Length(dir);
                 if (distanciaAPersonaje < 300f && !escondido)
                 {
@@ -627,22 +628,33 @@ namespace TGC.Group.Model
         {
             return (boundPersonaje.Center - boundMonstruo.Center).Length() < (boundPersonaje.Radius.Length() + boundMonstruo.Radius.Length());
         }
+        private bool colisionoMonstruoEnPersecucion = false;
         public void logicaPersecucion()
         {
-            Vector3 dir = this.personaje.Position - this.monstruo.Position;
-
-            dir = new Vector3(dir.X, 0f, dir.Z);
-            dir.Normalize();
-
-            var realMovement = colisionadorMonstruo.moveCharacter(boundMonstruo, dir*ElapsedTime*velocidadMonstruo, objetosColisionables);
+            if (!colisionoMonstruoEnPersecucion) {
+                direccionDePersecucion = this.personaje.Position - this.monstruo.Position;
+                direccionDePersecucion = new Vector3(direccionDePersecucion.X, 0f, direccionDePersecucion.Z);
+                direccionDePersecucion.Normalize();
+            }
+            var realMovement = colisionadorMonstruo.moveCharacter(boundMonstruo, direccionDePersecucion * ElapsedTime*velocidadMonstruo, objetosColisionables);
             monstruo.move(realMovement);
             
             monstruo.playAnimation("Run", true);
-            float angulo = (float)Math.Atan2(-dir.X, dir.Z);
+            float angulo = (float)Math.Atan2(-direccionDePersecucion.X, direccionDePersecucion.Z);
             monstruo.rotateY(anguloAnterior - angulo);
             anguloAnterior = angulo;
+            //CollisionResult r = colisionadorMonstruo.Result;
 
+            if (realMovement == new Vector3(0, 0, 0))
+            {
+                colisionoMonstruoEnPersecucion = true;
+                float unAngulo = (float)Math.PI / 2;
+                direccionDePersecucion = new Vector3((float)Math.Cos(unAngulo + monstruo.Rotation.Y), 0, (float)Math.Sin(unAngulo + monstruo.Rotation.Y));
+                direccionDePersecucion.Normalize();
+            }
+            else { colisionoMonstruoEnPersecucion = false; }
         }
+        
         public void logicaDelMonstruo(){
             if (persecucion) {
                 Vector3 pos = CheckpointHelper.checkpoints[0].Position;
@@ -693,6 +705,17 @@ namespace TGC.Group.Model
             }
         }
 
+        private void manejoDeEstadosDelMonstruo() {
+            switch (estado)
+            {
+                case Estado.CAMINANDO:
+                    break;
+                case Estado.ESQUIVANDO:
+                    break;
+                case Estado.PERSIGUIENDO:
+                    break;
+            }
+        }
         /*detectarColisiones(objetos);
 
 
