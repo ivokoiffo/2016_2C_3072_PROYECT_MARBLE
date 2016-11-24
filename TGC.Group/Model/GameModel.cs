@@ -76,7 +76,8 @@ namespace TGC.Group.Model
         private float velocidadMonstruo = 100f;
         //private float velocidadMonstruo = 200f;
 
-        private float velocidadPersonaje = 95f;
+        private float velocidadPersonaje = 405f;
+        //private float velocidadPersonaje = 95f;
 
         #endregion
 
@@ -638,7 +639,9 @@ namespace TGC.Group.Model
             }
             var realMovement = colisionadorMonstruo.moveCharacter(boundMonstruo, direccionDePersecucion * ElapsedTime*velocidadMonstruo, objetosColisionables);
             monstruo.move(realMovement);
-            
+            cargarSonido("grito.wav");
+            sound.play();
+            mp3Player.pause();
             monstruo.playAnimation("Run", true);
             float angulo = (float)Math.Atan2(-direccionDePersecucion.X, direccionDePersecucion.Z);
             monstruo.rotateY(anguloAnterior - angulo);
@@ -654,6 +657,8 @@ namespace TGC.Group.Model
         }
         
         public void logicaDelMonstruo(){
+            cargarSonido("pisada.wav");
+            mp3Player.resume();
             if (persecucion) {
                 Vector3 pos = CheckpointHelper.checkpoints[0].Position;
                 pos.Y =  monstruo.Position.Y;
