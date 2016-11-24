@@ -71,7 +71,8 @@ namespace TGC.Group.Model
         private bool estaEnMenu = true;
         #region seteosVelocidades
         private float velocidadMonstruo = 75f;
-        private float velocidadPersonaje = 70f;
+        //private float velocidadPersonaje = 70f;
+        private float velocidadPersonaje = 200f;
 
         #endregion
 
@@ -152,7 +153,7 @@ namespace TGC.Group.Model
             //Seteo del monsturo
             seteoDelMonstruo();
             //Seteo el escenario
-            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapaProjectMarbleOtro-TgcScene.xml");
+            escenario = new TgcSceneLoader().loadSceneFromFile(MediaDir + "Mapa\\mapaProjectMarble-TgcScene.xml");
 
             //initPuertaGiratoria();   
             //Almacenar volumenes de colision del escenario
@@ -292,7 +293,8 @@ namespace TGC.Group.Model
             if ((boundPersonaje.Center - mesh.BoundingSphere.Center).Length() < (boundPersonaje.Radius.Length() + mesh.BoundingSphere.Radius))
             {
                 escondido = true;
-                Camara.SetCamera(Vector3.Add(mesh.BoundingSphere.Center, new Vector3(1, 1, 1)), lookAt * (-1));
+                viewVector = new Vector3(-1,0,0);
+                Camara.SetCamera(mesh.BoundingSphere.Center + new Vector3(10,10,10) , lookAt * -1);
             }
         }
 
@@ -353,36 +355,41 @@ namespace TGC.Group.Model
         }
         public void moverPersonaje() 
         {
-            if (!flagGod && !escondido)
+            if (!flagGod)
             {
+
+
                 var moveVector = new Vector3(0, 0, 0);
                 var moving = false;
-                if (Input.keyDown(Key.W))
+                if (!escondido)
                 {
-                    moving = true;
-                    moveVector += new Vector3(1, 0, 0) * velocidadPersonaje;
-                }
+                    if (Input.keyDown(Key.W))
+                    {
+                        moving = true;
+                        moveVector += new Vector3(1, 0, 0) * velocidadPersonaje;
+                    }
 
-                if (Input.keyDown(Key.D))
-                {
-                    moving = true;
-                    moveVector += new Vector3(0, 0, -1) * velocidadPersonaje;
-                }
+                    if (Input.keyDown(Key.D))
+                    {
+                        moving = true;
+                        moveVector += new Vector3(0, 0, -1) * velocidadPersonaje;
+                    }
 
-                if (Input.keyDown(Key.A))
-                {
-                    moving = true;
-                    moveVector += new Vector3(0, 0, 1) * velocidadPersonaje;
-                }
+                    if (Input.keyDown(Key.A))
+                    {
+                        moving = true;
+                        moveVector += new Vector3(0, 0, 1) * velocidadPersonaje;
+                    }
 
-                if (Input.keyDown(Key.S))
-                {
-                    moving = true;
-                    moveVector += new Vector3(-1, 0, 0) * velocidadPersonaje;
-                }
-                if (moving)
-                {
-                    sound.play(false);
+                    if (Input.keyDown(Key.S))
+                    {
+                        moving = true;
+                        moveVector += new Vector3(-1, 0, 0) * velocidadPersonaje;
+                    }
+                    if (moving)
+                    {
+                        sound.play(false);
+                    }
                 }
                 //Vector de movimiento
                 var movementVector = Vector3.Empty;
@@ -397,14 +404,17 @@ namespace TGC.Group.Model
                 cameraRotation = Matrix.RotationY(-leftrightRot) * Matrix.RotationX(-updownRot); //calcula la rotacion del vector de view
 
                 movementVector = Vector3.TransformNormal(moveVector, Matrix.RotationY(-leftrightRot));
+
                 direccionLookAt = Vector3.TransformNormal(viewVector, cameraRotation); //direccion en que se mueve girada respecto la rotacion de la camara
+                if (!escondido)
+                {
+                    var realMovement = collisionManager.moveCharacter(boundPersonaje, movementVector * ElapsedTime, objetosColisionables);
+                    personaje.move(realMovement);
+                
+                    lookAt = Vector3.Add(getOffset(), direccionLookAt); //vector lookAt final
 
-                var realMovement = collisionManager.moveCharacter(boundPersonaje, movementVector*ElapsedTime, objetosColisionables);
-                personaje.move(realMovement);
-                lookAt = Vector3.Add(getOffset(), direccionLookAt); //vector lookAt final
-
-                Camara.SetCamera(getOffset(), lookAt);
-
+                    Camara.SetCamera(getOffset(), lookAt);
+                }
                 if (Input.keyPressed(Key.P))
                 {
                     foreach (var puerta in puertas)
@@ -413,6 +423,9 @@ namespace TGC.Group.Model
                     }
                 }
                 this.getColisionContraObjetoCarga();
+            }
+            if (!flagGod)
+            {
                 luz.consumir(ElapsedTime);
             }
         }
@@ -459,7 +472,6 @@ namespace TGC.Group.Model
         }
 
         private bool avanzaPositivamente = true;
-
         public override void Update()
         {
             PreUpdate();
@@ -507,7 +519,11 @@ namespace TGC.Group.Model
                 }
                 if (Input.keyUp(Key.E))
                 {
-                    if (escondido) { escondido = false;}
+                    if (escondido)
+                    {
+                        viewVector = new Vector3(1, 0, 0);
+                        escondido = false;
+                    }
                 }
                 actualizarEnergia();
             }
@@ -585,7 +601,7 @@ namespace TGC.Group.Model
                             if (flagGod) { luz.deshabilitarEfecto(mesh); }
                             else
                             {
-                                luz.aplicarEfecto(mesh, getOffset(), direccionLookAt);
+                                luz.aplicarEfecto(mesh, Camara.Position, direccionLookAt);
                             }
                             mesh.render();
 
