@@ -87,7 +87,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Game.settings</DependentUpon>
     </Compile>
-    <Compile Include="Model\Luces\Faro.cs" />
+    <Compile Include="Model\Luces\Farol.cs" />
     <Compile Include="Model\Utils\PosCamara.cs" />
     <Compile Include="Model\Utils\Sprite\AnimatedSprite.cs" />
     <Compile Include="Model\BoundingBoxCollider.cs" />

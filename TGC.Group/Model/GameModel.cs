@@ -453,13 +453,13 @@ namespace TGC.Group.Model
                         {
                             case "Vela":
                                 luz = new Vela();
-                                break;
+                            break;
                             case "Linterna":
                                 luz = new Linterna();
-                                break;
-                            case "Faro":
-                                luz = new Faro();
-                                break;
+                            break;
+                            case "Farol":
+                                luz = new Farol();
+                            break;
                         }
                     }
                     meshEscenario.Remove(recarga.mesh);
