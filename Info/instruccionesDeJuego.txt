@@ -1,0 +1,8 @@
+Instrucciones
+Teclas
+	espacio: activa el modo juego
+	G: una vez activa el modo God, otra lo desactiva
+	V: mantenido apretado activa el modo vision nocturna
+	E: mantenido apretado se esconde si detecta armarios cerca
+	w, a, s y d: para movimiento
+	P: una vez apretado si hay una puerta se traslada hacia el otro lado

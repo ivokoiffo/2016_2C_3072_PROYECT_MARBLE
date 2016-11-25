@@ -76,7 +76,7 @@ namespace TGC.Group.Model
         private bool estaEnMenu = true;
         #endregion
         #region seteosVelocidades
-        private float velocidadMonstruo = 105f;
+        private float velocidadMonstruo = 110f;
         private float velocidadPersonaje = 95f;
         
 
@@ -645,7 +645,7 @@ namespace TGC.Group.Model
                 #region ComentoCheckPoint
                 DrawText.drawText("Checkpoint Id: " + DestinoMonstruo.id, 0, 40, Color.OrangeRed);
                 //DESCOMENTAR PARA VER EL CAMINO
-                //CheckpointHelper.renderAll();
+                CheckpointHelper.renderAll();
                 #endregion
                 if (!activoVisionNoctura)
                 {
